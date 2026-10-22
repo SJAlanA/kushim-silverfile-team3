@@ -71,6 +71,10 @@ python run.py --dashboard                          # start the staff dashboard
 
 _Add `docs/graph.png` here once the graph is built._
 
+## AI accreditation
+
+Code in this repository was written with Claude (Anthropic) as an AI coding assistant. Team members defined the requirements, directed the design, and reviewed, tested and validated all generated code, and take full responsibility for it. Details of how each member used AI are in [docs/AI_DISCLOSURE.md](docs/AI_DISCLOSURE.md).
+
 ## Docs
 
 - [Implementation notes](docs/IMPLEMENTATION_NOTES.md)
