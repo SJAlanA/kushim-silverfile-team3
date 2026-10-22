@@ -1,0 +1,11 @@
+{
+  "doc_type": "W2",
+  "note": "Ground truth for the generated image. Used only if the image cannot be read.",
+  "fields": {
+    "employee_name": "Rosa Delgado",
+    "employee_ssn_last4": "4518",
+    "employer_name": "Finger Lakes Public Library",
+    "box1_wages": 18500,
+    "box2_fed_withheld": 1200
+  }
+}

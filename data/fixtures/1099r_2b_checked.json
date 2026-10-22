@@ -1,0 +1,14 @@
+{
+  "doc_type": "1099-R",
+  "tax_year": 2025,
+  "payer_name": "Old Mill Annuity Company",
+  "fields": {
+    "box1_gross": 15000,
+    "box2a_taxable": 0,
+    "box2b_taxable_not_determined": true,
+    "box4_fed_withheld": 1500,
+    "box7_code": "7",
+    "ira_sep_simple": false,
+    "qcd_amount": 0
+  }
+}

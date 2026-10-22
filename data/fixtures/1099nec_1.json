@@ -1,0 +1,9 @@
+{
+  "doc_type": "1099-NEC",
+  "tax_year": 2025,
+  "payer_name": "Lakeside Events LLC",
+  "fields": {
+    "box1_nonemployee_compensation": 4200,
+    "box4_fed_withheld": 0
+  }
+}

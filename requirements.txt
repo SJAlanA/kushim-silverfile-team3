@@ -7,3 +7,5 @@ python-dotenv>=1.0
 pillow>=10.0
 flask>=3.0
 pytest>=8.0
+pytesseract>=0.3              # optional OCR; needs the tesseract binary (apt-get install tesseract-ocr)
+rapidocr-onnxruntime>=1.3; python_version < "3.13"   # pip-only OCR so W-2 images read offline with no system packages

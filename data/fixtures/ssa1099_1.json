@@ -1,0 +1,9 @@
+{
+  "doc_type": "SSA-1099",
+  "tax_year": 2025,
+  "payer_name": "Social Security Administration",
+  "fields": {
+    "box5_net_benefits": 12000,
+    "box6_fed_withheld": 0
+  }
+}
