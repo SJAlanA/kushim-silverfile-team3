@@ -11,18 +11,22 @@ taxpayer (about 20 question turns each).
 
 Offline run: counts are estimated as `len(prompt) // 4` over the exact prompt Intake would send. Regenerate with `python -m src.batch --write-metrics`.
 
-| # | Item | Input tokens (no strategy) | Input tokens (strategy) |
-| --- | --- | --- | --- |
-| 1 | batch_01 | 5,532 | 5,532 |
-| 2 | batch_02 | 22,082 | 9,187 |
-| 3 | batch_03 | 26,856 | 6,354 |
-| 4 | batch_04 | 36,507 | 6,527 |
-| 5 | batch_05 | 64,293 | 10,535 |
-| 6 | batch_06 | 84,093 | 11,886 |
-| 7 | batch_07 | 74,078 | 8,203 |
-| 8 | batch_08 | 79,819 | 7,338 |
-| 9 | batch_09 | 123,999 | 11,359 |
-| 10 | batch_10 | 101,023 | 7,317 |
+Taxpayers need different numbers of questions, so the last two columns divide by the number of
+Intake model calls for that taxpayer. That per-question view shows the shape most clearly: it climbs
+steadily with no strategy and stays flat with selective recall.
+
+| # | Item | Questions | Input tokens (no strategy) | Input tokens (strategy) | Per question (no strategy) | Per question (strategy) |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | batch_01 | 16 | 5,532 | 5,532 | 345 | 345 |
+| 2 | batch_02 | 22 | 22,082 | 9,187 | 1,003 | 417 |
+| 3 | batch_03 | 16 | 26,856 | 6,354 | 1,678 | 397 |
+| 4 | batch_04 | 16 | 36,507 | 6,527 | 2,281 | 407 |
+| 5 | batch_05 | 22 | 64,293 | 10,535 | 2,922 | 478 |
+| 6 | batch_06 | 23 | 84,093 | 11,886 | 3,656 | 516 |
+| 7 | batch_07 | 17 | 74,078 | 8,203 | 4,357 | 482 |
+| 8 | batch_08 | 16 | 79,819 | 7,338 | 4,988 | 458 |
+| 9 | batch_09 | 22 | 123,999 | 11,359 | 5,636 | 516 |
+| 10 | batch_10 | 16 | 101,023 | 7,317 | 6,313 | 457 |
 
 | | No strategy | Strategy |
 | --- | --- | --- |

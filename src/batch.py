@@ -103,14 +103,15 @@ def run_batch(context_strategy: bool = True, cases_dir: Path = BATCH_DIR) -> lis
     for case in cases:
         entries = [entry for entry in final["token_log"] if entry["item"] == case["case_id"]]
         rows.append({"item": case["case_id"], "input_tokens": sum(entry["input_tokens"] for entry in entries),
-                     "estimated": any(entry.get("estimated") for entry in entries)})
+                     "calls": len(entries), "estimated": any(entry.get("estimated") for entry in entries)})
     return rows
 
 
 def write_metrics() -> None:
     off, on = run_batch(context_strategy=False), run_batch(context_strategy=True)
     estimated = any(row["estimated"] for row in off + on)
-    table = "\n".join(f"| {index} | {a['item']} | {a['input_tokens']:,} | {b['input_tokens']:,} |"
+    table = "\n".join(f"| {index} | {a['item']} | {a['calls']} | {a['input_tokens']:,} | {b['input_tokens']:,} "
+                      f"| {_per_call(a):,} | {_per_call(b):,} |"
                       for index, (a, b) in enumerate(zip(off, on), start=1))
     source = ("Offline run: counts are estimated as `len(prompt) // 4` over the exact prompt Intake would send."
               if estimated else "Counts are the model's reported `usage_metadata['input_tokens']`.")
@@ -127,8 +128,12 @@ taxpayer (about 20 question turns each).
 
 {source} Regenerate with `python -m src.batch --write-metrics`.
 
-| # | Item | Input tokens (no strategy) | Input tokens (strategy) |
-| --- | --- | --- | --- |
+Taxpayers need different numbers of questions, so the last two columns divide by the number of
+Intake model calls for that taxpayer. That per-question view shows the shape most clearly: it climbs
+steadily with no strategy and stays flat with selective recall.
+
+| # | Item | Questions | Input tokens (no strategy) | Input tokens (strategy) | Per question (no strategy) | Per question (strategy) |
+| --- | --- | --- | --- | --- | --- | --- |
 {table}
 
 | | No strategy | Strategy |
@@ -141,6 +146,10 @@ taxpayer (about 20 question turns each).
 ![Per-item input tokens](context_strategy.svg)
 """)
     CHART_PATH.write_text(_chart_svg(off, on))
+
+
+def _per_call(row: dict) -> int:
+    return row["input_tokens"] // max(row["calls"], 1)
 
 
 def _chart_svg(off: list[dict], on: list[dict]) -> str:
