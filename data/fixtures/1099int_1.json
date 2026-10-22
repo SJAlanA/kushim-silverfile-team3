@@ -1,0 +1,10 @@
+{
+  "doc_type": "1099-INT",
+  "tax_year": 2025,
+  "payer_name": "Tompkins Community Bank",
+  "fields": {
+    "box1_interest": 300,
+    "box4_fed_withheld": 0,
+    "box8_tax_exempt_interest": 0
+  }
+}
