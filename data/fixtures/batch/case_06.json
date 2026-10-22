@@ -1,0 +1,54 @@
+{
+  "case_id": "batch_06",
+  "description": "Batch intake 6: mfs, 2 documents, clean run",
+  "answers": {
+    "who_is_answering": "yes",
+    "taxpayer_first_name": "Elias",
+    "taxpayer_last_name": "Thorne",
+    "taxpayer_ssn": "906-16-1222",
+    "taxpayer_dob": "1954-09-17",
+    "taxpayer_blind": false,
+    "can_be_claimed_as_dependent": false,
+    "filing_status": "mfs",
+    "spouse_died_in_2025": false,
+    "spouse_first_name": "Alex",
+    "spouse_last_name": "Thorne",
+    "spouse_ssn": "955-26-2246",
+    "spouse_dob": "1956-06-06",
+    "spouse_blind": false,
+    "spouse_itemizes_separately": false,
+    "dual_status_alien": false,
+    "dependents": [],
+    "other_income": {
+      "has_other_income": false,
+      "description": ""
+    },
+    "adjustments": 0,
+    "schedule_values": {
+      "sch1_line10": 0,
+      "sch2_line3": 0,
+      "sch2_line21": 0,
+      "sch3_line8": 0,
+      "sch3_line15": 0
+    },
+    "estimated_payments": 0,
+    "refund_destination": "My own checking account"
+  },
+  "documents": [
+    {
+      "doc_id": "ssa_1",
+      "doc_type": "SSA-1099",
+      "path": "data/fixtures/batch/docs/case_06_ssa_1.json"
+    },
+    {
+      "doc_id": "div_1",
+      "doc_type": "1099-DIV",
+      "path": "data/fixtures/batch/docs/case_06_div_1.json"
+    }
+  ],
+  "hitl_resolutions": [],
+  "expected": {
+    "lines": {},
+    "hitl_conditions": []
+  }
+}

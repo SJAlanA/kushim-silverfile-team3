@@ -1,0 +1,47 @@
+{
+  "case_id": "batch_04",
+  "description": "Batch intake 4: single, 2 documents, clean run",
+  "answers": {
+    "who_is_answering": "yes",
+    "taxpayer_first_name": "Henry",
+    "taxpayer_last_name": "Baptiste",
+    "taxpayer_ssn": "904-14-1148",
+    "taxpayer_dob": "1949-01-30",
+    "taxpayer_blind": true,
+    "can_be_claimed_as_dependent": false,
+    "filing_status": "single",
+    "dual_status_alien": false,
+    "dependents": [],
+    "other_income": {
+      "has_other_income": false,
+      "description": ""
+    },
+    "adjustments": 0,
+    "schedule_values": {
+      "sch1_line10": 0,
+      "sch2_line3": 0,
+      "sch2_line21": 0,
+      "sch3_line8": 0,
+      "sch3_line15": 0
+    },
+    "estimated_payments": 0,
+    "refund_destination": "My own checking account"
+  },
+  "documents": [
+    {
+      "doc_id": "ssa_1",
+      "doc_type": "SSA-1099",
+      "path": "data/fixtures/batch/docs/case_04_ssa_1.json"
+    },
+    {
+      "doc_id": "r_1",
+      "doc_type": "1099-R",
+      "path": "data/fixtures/batch/docs/case_04_r_1.json"
+    }
+  ],
+  "hitl_resolutions": [],
+  "expected": {
+    "lines": {},
+    "hitl_conditions": []
+  }
+}

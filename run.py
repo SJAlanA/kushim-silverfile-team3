@@ -15,6 +15,12 @@ def main() -> None:
     parser.add_argument("--no-context-strategy", action="store_true", help="Disable the context-window strategy")
     parser.add_argument("--dashboard", action="store_true", help="Start the staff dashboard")
     args = parser.parse_args()
+    if args.batch:
+        from src.batch import print_table, run_batch
+
+        strategy = not args.no_context_strategy
+        print_table(run_batch(context_strategy=strategy), strategy)
+        return
     print("SilverFile is not wired up yet.", vars(args))
 
 
