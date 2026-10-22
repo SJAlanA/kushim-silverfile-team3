@@ -1,0 +1,14 @@
+{
+  "doc_type": "1099-R",
+  "tax_year": 2025,
+  "payer_name": "Ithaca Savings IRA Custodian",
+  "fields": {
+    "box1_gross": 8000,
+    "box2a_taxable": 8000,
+    "box2b_taxable_not_determined": false,
+    "box4_fed_withheld": 800,
+    "box7_code": "7",
+    "ira_sep_simple": true,
+    "qcd_amount": 3000
+  }
+}

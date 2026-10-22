@@ -1,0 +1,10 @@
+{
+  "doc_type": "1099-DIV",
+  "tax_year": 2025,
+  "payer_name": "Seneca Index Fund",
+  "fields": {
+    "box1a_ordinary": 100,
+    "box1b_qualified": 50,
+    "box4_fed_withheld": 0
+  }
+}

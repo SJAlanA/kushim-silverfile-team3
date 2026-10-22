@@ -1,0 +1,11 @@
+{
+  "doc_type": "W2",
+  "note": "Ground truth for the generated image. Used only if the image cannot be read.",
+  "fields": {
+    "employee_name": "Mara Lindqvist",
+    "employee_ssn_last4": "1037",
+    "employer_name": "Willowbrook Garden Center",
+    "box1_wages": 30000,
+    "box2_fed_withheld": 2000
+  }
+}
