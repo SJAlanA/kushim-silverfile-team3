@@ -17,7 +17,7 @@ from pathlib import Path
 
 from langchain_core.messages import BaseMessage, HumanMessage
 
-DEFAULT_MODEL = "claude-sonnet-5"
+DEFAULT_MODEL = "claude-sonnet-5-5"
 
 
 def is_offline() -> bool:
