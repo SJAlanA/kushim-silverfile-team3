@@ -36,7 +36,7 @@ def test_full_clean_intake_asks_one_question_per_turn(dialog, case_single):
     assert state["intake_complete"] is True
     assert len(asked) == len(set(asked)) == len(state["intake"])
     assert not any(qid.startswith("spouse_") for qid in asked)  # single filer
-    assert [doc["doc_id"] for doc in state["documents"]] == ["int_1", "ssa_1", "w2_1"]
+    assert [doc["doc_id"] for doc in state["documents"]] == ["w2_1", "ssa_1", "int_1"]  # order listed
     assert not _open_conditions(state)
 
 
@@ -185,7 +185,7 @@ def test_documents_and_dependents_can_be_given_conversationally(dialog, case_sin
     assert state["intake"]["dependents"]["value"] == [
         {"first_name": "Lucia", "last_name": "Delgado", "relationship": "She's my granddaughter", "ssn": "912-45-6603"}]
     assert [(doc["doc_id"], doc["path"]) for doc in state["documents"]] == [
-        ("ssa_1", "data/fixtures/ssa_1.json"), ("w2_1", "demo/w2_image_1.jpg")]
+        ("w2_1", "demo/w2_image_1.jpg"), ("ssa_1", "data/fixtures/ssa_1.json")]  # order the taxpayer listed
 
 
 def test_all_fixed_intake_wording_passes_the_outgoing_check():
@@ -223,3 +223,29 @@ def test_safe_model_phrasing_is_used(monkeypatch, intake_graph):
 
     _fake_model(monkeypatch, "Is this tax return for you?")
     assert Dialog(intake_graph).start()["text"] == "Is this tax return for you?"
+
+
+def test_volunteered_ssn_is_dropped_and_the_rest_of_the_answer_still_counts():
+    from src.batch import _apply
+
+    state = {"session_id": "t", "messages": [], "intake": {}, "intake_meta": {}, "documents": [], "hitl": [],
+             "token_log": []}
+    for reply in ["yes", "Mara", "Example, and my SSN is 123-45-6789"]:
+        _apply(state, intake.ask(state), [])
+        _apply(state, intake.answer(state, reply), [])
+    assert state["intake"]["taxpayer_last_name"]["value"] == "Example"
+    assert intake.VOLUNTEERED_SSN_NOTICE in _assistant_text(state)
+    assert "6789" not in json.dumps(state, default=str)
+
+
+def test_a_bare_volunteered_number_is_re_asked_without_counting_as_a_failed_try():
+    from src.batch import _apply
+
+    state = {"session_id": "t", "messages": [], "intake": {}, "intake_meta": {}, "documents": [], "hitl": [],
+             "token_log": []}
+    for reply in ["yes", "Mara", "123-45-6789", "Example"]:
+        _apply(state, intake.ask(state), [])
+        _apply(state, intake.answer(state, reply), [])
+    assert state["intake"]["taxpayer_last_name"]["value"] == "Example"
+    assert not _open_conditions(state)
+    assert "6789" not in json.dumps(state, default=str)

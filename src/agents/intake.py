@@ -62,6 +62,11 @@ RETRY_HINTS = {
 }
 _COMPOUND = re.compile(r"\b(and|or) (what|when|how|who|where|which|why)\b")
 _SSN_IN_TEXT = "[SSN redacted]"
+# Our own pattern, so detection doesn't depend on how security.redact_pii formats its mask.
+_SSN_LIKE = re.compile(r"\b\d{3}[- ]?\d{2}[- ]?\d{4}\b")
+_VOLUNTEERED_SSN = re.compile(
+    r"[,;.]?\s*(?:and\s+)?(?:my\s+)?(?:ssn|social(?:\s+security)?(?:\s+number)?|number)?\s*(?:is|:)?\s*"
+    r"\b\d{3}[- ]?\d{2}[- ]?\d{4}\b", re.IGNORECASE)
 
 
 @dataclass
@@ -113,8 +118,16 @@ def answer(state: dict, reply: str) -> dict:
     flags = classify_utterance(reply)  # local check on the raw words; only the redacted text is stored
     update: dict = {"messages": [_human(state, redacted)], "status": "intake"}
     volunteered = (kind != "ssn" and parse.parse_json(reply) is None
-                   and (flags["volunteered_ssn"] or _SSN_IN_TEXT in redacted))
+                   and (flags["volunteered_ssn"] or bool(_SSN_LIKE.search(reply))))
     notes = [VOLUNTEERED_SSN_NOTICE] if volunteered else []
+    if volunteered:
+        # Read the rest of the answer without the number ("Example, and my SSN is ..." -> "Example").
+        reply = _VOLUNTEERED_SSN.sub("", reply).strip(" ,;.")
+        if not reply:
+            # Only a number was given: re-ask the same question without counting it as a failed try.
+            meta["pending"]["text"] = meta["pending"]["base"]
+            update["messages"].append(_ai(state, meta["pending"]["text"]))
+            return _finish(state, update, meta, notes)
 
     navigation = parse.parse_navigation(reply) if len(reply.split()) <= NAVIGATION_MAX_WORDS else None
     if navigation:
@@ -424,7 +437,10 @@ def _record(state: dict, meta: dict, qid: str, step: Step, update: dict, notes: 
     if step.ack:
         notes.append(step.ack)
     _clear_question(meta, qid)
-    meta.setdefault("answered_order", []).append(qid)
+    order = meta.setdefault("answered_order", [])
+    if qid in order:
+        order.remove(qid)  # a re-answered question moves to the end, so "go back" stays predictable
+    order.append(qid)
     if qid == "spouse_died_in_2025" and step.value:
         notes.append(LOSS_REPLY)
         step.escalate = ("FILING_STATUS_AMBIGUITY", "The taxpayer's spouse died during 2025, so the right "
