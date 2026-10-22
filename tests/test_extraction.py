@@ -16,6 +16,7 @@ from src.state import SilverFileState
 ROOT = Path(__file__).resolve().parent.parent
 W2_IMAGE_1 = {"doc_id": "w2_1", "doc_type": "W2", "path": str(ROOT / "demo" / "w2_image_1.jpg")}
 W2_IMAGE_2 = {"doc_id": "w2_2", "doc_type": "W-2", "path": str(ROOT / "demo" / "w2_image_2.jpg")}
+W2_IMAGE_3 = {"doc_id": "w2_3", "doc_type": "W2", "path": str(ROOT / "demo" / "w2_image_3.jpg")}
 FULL_SSN = re.compile(r"\d{3}-?\d{2}-?\d{4}")
 LINE_WORDS = re.compile(r"\b(line|taxable income|total)\b", re.I)
 
@@ -40,6 +41,7 @@ needs_ocr = pytest.mark.skipif(not ocr_available() and llm.is_offline(), reason=
 @pytest.mark.parametrize("doc, wages, withheld, name", [
     (W2_IMAGE_1, 30000, 2000, "Mara Lindqvist"),
     (W2_IMAGE_2, 18500, 1200, "Rosa Delgado"),
+    (W2_IMAGE_3, 48500, 6835, "Theo R Brandt"),  # every box filled, including 12, 13 and state rows
 ])
 def test_w2_image_is_read_exactly(doc, wages, withheld, name):
     record = extract_document(doc)
