@@ -122,6 +122,21 @@ def test_advice_request_escalates_and_is_noted(dialog, case_single):
     assert intake.ADVICE_REPLY in _assistant_text(state)
 
 
+def test_third_party_answering_mid_intake_escalates(dialog, case_single):
+    dialog.answer_until(case_single, "taxpayer_dob")
+    assert dialog.say("My nephew is doing this for me, he knows the dates") is None
+    assert _open_conditions(dialog.state) == ["EXPLOITATION"]
+
+
+def test_out_of_scope_income_is_recorded_not_escalated_by_intake(dialog, case_single):
+    dialog.answer_until(case_single, "other_income")
+    dialog.say("Yes, rental income from a condo")
+    state = dialog.state
+    assert not _open_conditions(state)
+    assert state["intake"]["other_income"]["value"] == {"has_other_income": True,
+                                                        "description": "Yes, rental income from a condo"}
+
+
 def test_third_party_without_authority_escalates(dialog):
     assert dialog.say("No")["text"].startswith("What is your relationship")
     assert dialog.say("I'm her neighbour")["text"].startswith("Do you have legal authority")

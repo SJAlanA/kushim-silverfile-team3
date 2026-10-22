@@ -109,8 +109,10 @@ def answer(state: dict, reply: str) -> dict:
     qid, sub = pending["question_id"], pending.get("sub")
     kind = SUB_KINDS[sub] if sub else BY_ID[qid].kind
     redacted = redact_pii(reply)
+    flags = classify_utterance(reply)  # local check on the raw words; only the redacted text is stored
     update: dict = {"messages": [_human(state, redacted)], "status": "intake"}
-    volunteered = kind != "ssn" and parse.parse_json(reply) is None and _SSN_IN_TEXT in redacted
+    volunteered = (kind != "ssn" and parse.parse_json(reply) is None
+                   and (flags["volunteered_ssn"] or _SSN_IN_TEXT in redacted))
     notes = [VOLUNTEERED_SSN_NOTICE] if volunteered else []
 
     navigation = parse.parse_navigation(reply) if len(reply.split()) <= NAVIGATION_MAX_WORDS else None
@@ -118,7 +120,7 @@ def answer(state: dict, reply: str) -> dict:
         return _navigate(state, meta, navigation, update, notes)
     if kind != "refund" and parse.is_uncertain(reply):
         return _flag_uncertain(state, meta, qid, update, notes)
-    concern = _classify(redacted, qid)
+    concern = _concern(flags, qid)
     if concern:
         return _escalate_concern(state, meta, concern, redacted, qid, update, notes)
 
@@ -172,11 +174,17 @@ def _phrase(state: dict, template: str) -> tuple[str, dict]:
     return template, log_tokens(AGENT, item, estimate_tokens(rendered), enabled, estimated=True)
 
 
-def _classify(redacted: str, qid: str) -> str | None:
-    concern = classify_utterance(redacted, qid)
-    if concern == "out_of_scope" and qid in ("other_income", "documents"):
-        return None  # recorded as an answer; Eligibility decides scope
-    return concern
+def _concern(flags: dict, qid: str) -> str | None:
+    """Turn guardrails.classify_utterance flags into the one concern Intake escalates, if any."""
+    if flags["advice_request"]:
+        return "advice"
+    if flags["exploitation_signals"]:
+        return "exploitation"
+    if flags["third_party"] and qid != "who_is_answering":  # that question's own flow checks authority
+        return "exploitation"
+    if flags["out_of_scope_items"] and qid not in ("other_income", "documents"):
+        return "out_of_scope"  # in those two answers it is recorded and Eligibility decides scope
+    return None
 
 
 def _read(qid: str, sub: str | None, kind: str, reply: str, redacted: str, meta: dict) -> Step:
