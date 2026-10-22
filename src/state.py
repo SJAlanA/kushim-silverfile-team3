@@ -13,6 +13,7 @@ re-run agents that rewrite the same keys. Ties are broken by a canonical JSON en
 even two writes with identical timestamps resolve the same way every time.
 
 Contract additions (all optional, nothing renamed):
+- Answer: `_versions` (written only by merge_answers).
 - ExtractedRecord: `flags`, `warnings`, `_conflicts`.
 - HITLEvent: `details`, `raised_at` (already written by src/hitl.py).
 - SilverFileState: `intake_meta`, `current_item`, `context_strategy` (added by Agent memory).
@@ -31,6 +32,7 @@ class Answer(TypedDict):
     raw_text: str            # user's words, PII-redacted
     answered_at: str         # ISO timestamp
     history: list[dict]      # previous values if the user changed their answer
+    _versions: NotRequired[list[dict]]  # reducer-owned lossless log that `history` is derived from
 
 
 class DocumentRef(TypedDict):
@@ -101,33 +103,37 @@ def _snapshot(answer: dict) -> dict:
 
 
 def _answer_versions(answer: dict) -> list[dict]:
-    """Every version an Answer knows about: its history plus its current value."""
-    return [_snapshot(entry) for entry in answer.get("history", [])] + [_snapshot(answer)]
+    """Every version an Answer knows about: its full version log, its history and its current value."""
+    entries = answer.get("_versions", []) + answer.get("history", []) + [answer]
+    return [_snapshot(entry) for entry in entries]
 
 
 def _merge_one_answer(old: dict, new: dict) -> Answer:
     """Fold two writes of the same question into one Answer.
 
-    The latest version (by `answered_at`) is current. Every earlier version is kept in
-    `history`, except one immediately followed by the same value (a user repeating
-    themselves is not a change). Because this is a function of the set of versions, it gives
-    the same result whichever write arrives first, and a previous answer is never lost.
+    The reducer keeps a lossless `_versions` log (every distinct version, oldest first) and
+    derives the visible fields from it: the latest version is current, and `history` holds
+    each earlier value that was later changed. A version immediately followed by the same
+    value is a repeat, not a change, so it stays in `_versions` but not in `history`.
+
+    Deriving from a lossless log is what makes this order-independent: dropping the repeat
+    outright would lose information a later merge needs, so the outcome would depend on
+    which writes had already been folded together.
     """
     versions = {_canonical(v): v for v in _answer_versions(old) + _answer_versions(new)}
     ordered = sorted(versions.values(), key=lambda v: (v["answered_at"], _canonical(v)))
     current = ordered[-1]
     history = [v for v, nxt in zip(ordered, ordered[1:]) if _canonical(v["value"]) != _canonical(nxt["value"])]
     source = new if _snapshot(new) == current else old
-    extras = {k: v for k, v in source.items() if k not in ("value", "raw_text", "answered_at", "history")}
-    return {**extras, **current, "history": history}
+    extras = {k: v for k, v in source.items() if k not in ("value", "raw_text", "answered_at", "history", "_versions")}
+    return {**extras, **current, "history": history, "_versions": ordered}
 
 
 def merge_answers(left: dict[str, Answer] | None, right: dict[str, Answer] | None) -> dict[str, Answer]:
     """Merge intake answers by question_id. Never deletes a key; a changed value goes to `history`."""
     merged = dict(left or {})
     for question_id, new in (right or {}).items():
-        merged[question_id] = _merge_one_answer(merged[question_id], new) if question_id in merged else {
-            **new, "history": list(new.get("history", []))}
+        merged[question_id] = _merge_one_answer(merged.get(question_id, new), new)
     return merged
 
 
