@@ -1,17 +1,27 @@
 """Shared graph state and reducers.
 
 Owner: Inter agent communication.
-This is the contract every agent reads and writes. Agree on it before building agents.
 
-# STUB: owned by Inter agent communication. Written by Agent memory so the Intake agent
-# and memory module can run before PR A lands; the owner's real version replaces it.
-# Agent memory adds three OPTIONAL fields (marked below): intake_meta, current_item,
-# context_strategy.
+This module is the contract every agent reads and writes (prompts/00_shared_contract.md,
+section 3). Agents return partial updates; LangGraph folds them into the state with the
+reducers below.
+
+Every reducer is pure and order-independent: the result depends only on the *set* of writes,
+never on the order in which parallel branches finish. That matters because the Send fan-out
+in the extraction step runs `extract_one` branches concurrently, and the review loop can
+re-run agents that rewrite the same keys. Ties are broken by a canonical JSON encoding, so
+even two writes with identical timestamps resolve the same way every time.
+
+Contract additions (all optional, nothing renamed):
+- ExtractedRecord: `flags`, `warnings`, `_conflicts`.
+- HITLEvent: `details`, `raised_at` (already written by src/hitl.py).
+- SilverFileState: `intake_meta`, `current_item`, `context_strategy` (added by Agent memory).
 """
 from __future__ import annotations
 
+import json
 import operator
-from typing import Annotated, Any, Literal, TypedDict
+from typing import Annotated, Any, Literal, NotRequired, TypedDict
 
 from langgraph.graph.message import add_messages
 
@@ -24,43 +34,48 @@ class Answer(TypedDict):
 
 
 class DocumentRef(TypedDict):
-    doc_id: str
-    doc_type: str
-    path: str
+    doc_id: str              # e.g. "w2_1", "ssa_1"
+    doc_type: str            # "W2" | "1099-INT" | "1099-DIV" | "1099-R" | "SSA-1099" | other (e.g. "1099-NEC")
+    path: str                # image (.jpg/.png) or .json fixture
 
 
 class ExtractedRecord(TypedDict):
     doc_id: str
     doc_type: str
-    fields: dict[str, Any]
-    extractor: str
+    fields: dict[str, Any]   # contract section 5
+    extractor: str           # "vision" | "ocr" | "json" | "failed"
     confidence: float
     source_path: str
+    flags: NotRequired[list[str]]        # prompt-injection patterns found in the document's text
+    warnings: NotRequired[list[str]]     # plain-language notes for Review and the Kushim employee
+    _conflicts: NotRequired[list[dict]]  # other readings of the same doc_id that disagreed
 
 
 class Provenance(TypedDict):
-    sources: list[dict]
-    tool: str
+    sources: list[dict]      # [{"doc_id": "w2_1", "field": "box1_wages"}] or [{"intake": "estimated_payments"}]
+    tool: str                # tax_math tool name, or "direct_user_input"
     inputs: dict
-    formula: str
-    method_note: str
-    entered_by: str
-    at: str
+    formula: str             # human-readable, e.g. "30,000 + 300 + 100 + 6,540 = 36,940"
+    method_note: str         # e.g. "2025 rate schedule, qualified dividends at 0%"
+    entered_by: str          # agent name or "user"
+    at: str                  # ISO timestamp
 
 
 class LineValue(TypedDict):
-    line: str
-    value: int
+    line: str                # "1z", "6b", ... (contract section 6)
+    value: int               # whole dollars
     provenance: Provenance
 
 
 class HITLEvent(TypedDict):
     event_id: str
-    condition: str
-    reason: str
+    condition: str           # contract section 7
+    reason: str              # plain-language for the Kushim employee
     raised_by: str
     status: Literal["open", "resolved"]
-    resolution: dict | None
+    resolution: dict | None  # {"decision", "note", "resolved_by", "resolved_at", "updates"}
+    details: NotRequired[dict]
+    raised_at: NotRequired[str]
 
 
 class AgentMessage(TypedDict):
@@ -71,42 +86,132 @@ class AgentMessage(TypedDict):
     payload: dict
 
 
+# ---------------------------------------------------------------------------
+# Reducers
+# ---------------------------------------------------------------------------
+
+def _canonical(obj: Any) -> str:
+    """Stable text form of any JSON-like value, used for dedupe keys and tie-breaks."""
+    return json.dumps(obj, sort_keys=True, default=str)
+
+
+def _snapshot(answer: dict) -> dict:
+    return {"value": answer.get("value"), "raw_text": answer.get("raw_text", ""),
+            "answered_at": answer.get("answered_at", "")}
+
+
+def _answer_versions(answer: dict) -> list[dict]:
+    """Every version an Answer knows about: its history plus its current value."""
+    return [_snapshot(entry) for entry in answer.get("history", [])] + [_snapshot(answer)]
+
+
+def _merge_one_answer(old: dict, new: dict) -> Answer:
+    """Fold two writes of the same question into one Answer.
+
+    The latest version (by `answered_at`) is current. Every earlier version is kept in
+    `history`, except one immediately followed by the same value (a user repeating
+    themselves is not a change). Because this is a function of the set of versions, it gives
+    the same result whichever write arrives first, and a previous answer is never lost.
+    """
+    versions = {_canonical(v): v for v in _answer_versions(old) + _answer_versions(new)}
+    ordered = sorted(versions.values(), key=lambda v: (v["answered_at"], _canonical(v)))
+    current = ordered[-1]
+    history = [v for v, nxt in zip(ordered, ordered[1:]) if _canonical(v["value"]) != _canonical(nxt["value"])]
+    source = new if _snapshot(new) == current else old
+    extras = {k: v for k, v in source.items() if k not in ("value", "raw_text", "answered_at", "history")}
+    return {**extras, **current, "history": history}
+
+
 def merge_answers(left: dict[str, Answer] | None, right: dict[str, Answer] | None) -> dict[str, Answer]:
-    """Merge by question_id; when a value changes, the old version is appended to `history`."""
+    """Merge intake answers by question_id. Never deletes a key; a changed value goes to `history`."""
     merged = dict(left or {})
     for question_id, new in (right or {}).items():
-        old = merged.get(question_id)
-        history = list(old["history"]) if old else []
-        if old is not None and old["value"] != new["value"]:
-            history.append(_snapshot(old))
-        merged[question_id] = {**new, "history": history}
+        merged[question_id] = _merge_one_answer(merged[question_id], new) if question_id in merged else {
+            **new, "history": list(new.get("history", []))}
     return merged
 
 
-def _snapshot(answer: Answer) -> dict:
-    return {"value": answer["value"], "raw_text": answer["raw_text"], "answered_at": answer["answered_at"]}
-
-
 def merge_documents(left: list[DocumentRef] | None, right: list[DocumentRef] | None) -> list[DocumentRef]:
-    """Dedupe by doc_id, keeping first-seen order (contract section 3); a later entry updates in place."""
+    """Dedupe by doc_id, keeping first-seen order; a later entry for the same doc_id updates it in place."""
     by_id: dict[str, DocumentRef] = {}
     for doc in (left or []) + (right or []):
         by_id[doc["doc_id"]] = doc  # dicts keep insertion order, so the first position is kept
     return list(by_id.values())
 
 
-def merge_extracted(left: dict | None, right: dict | None) -> dict:
-    merged = {**(left or {}), **(right or {})}
-    return {key: merged[key] for key in sorted(merged)}
+_EXTRACTOR_RANK = {"vision": 3, "ocr": 2, "json": 1, "failed": 0}
 
 
-def merge_lines(left: dict | None, right: dict | None) -> dict:
-    return {**(left or {}), **(right or {})}
+def _record_rank(record: dict) -> tuple:
+    """Total order over readings of one document: confidence, then extractor, then content."""
+    return (float(record.get("confidence", 0.0)), _EXTRACTOR_RANK.get(record.get("extractor", ""), 0),
+            _canonical(_without_conflicts(record)))
+
+
+def _without_conflicts(record: dict) -> dict:
+    return {k: v for k, v in record.items() if k != "_conflicts"}
+
+
+def _merge_one_record(a: dict, b: dict) -> ExtractedRecord:
+    """Keep the higher-ranked reading; record readings with different fields under `_conflicts`.
+
+    Candidates are every reading either side has seen (including earlier conflicts). The
+    winner is the top-ranked one; for every other distinct set of fields the best reading is
+    kept as a conflict. This is a pure function of the candidate set, so it is commutative
+    and associative, which is what makes concurrent `extract_one` writes safe.
+    """
+    candidates = [_without_conflicts(r) for r in (a, b)]
+    candidates += [c for r in (a, b) for c in r.get("_conflicts", [])]
+    winner = max(candidates, key=_record_rank)
+    best_per_fields: dict[str, dict] = {}
+    for candidate in candidates:
+        key = _canonical(candidate.get("fields", {}))
+        if key == _canonical(winner.get("fields", {})):
+            continue
+        if key not in best_per_fields or _record_rank(candidate) > _record_rank(best_per_fields[key]):
+            best_per_fields[key] = candidate
+    merged = dict(winner)
+    if best_per_fields:
+        merged["_conflicts"] = sorted(best_per_fields.values(), key=_record_rank, reverse=True)
+    return merged
+
+
+def merge_extracted(left: dict[str, ExtractedRecord] | None,
+                    right: dict[str, ExtractedRecord] | None) -> dict[str, ExtractedRecord]:
+    """Merge extracted records by doc_id. Output is sorted by doc_id so it never depends on arrival order."""
+    merged = dict(left or {})
+    for doc_id, record in (right or {}).items():
+        merged[doc_id] = _merge_one_record(merged[doc_id], record) if doc_id in merged else record
+    return {doc_id: merged[doc_id] for doc_id in sorted(merged)}
+
+
+def _line_rank(line: dict) -> tuple:
+    return (line.get("provenance", {}).get("at", ""), _canonical(line))
+
+
+def merge_lines(left: dict[str, LineValue] | None, right: dict[str, LineValue] | None) -> dict[str, LineValue]:
+    """Merge return lines by line key; the value with the newer `provenance.at` wins."""
+    merged = dict(left or {})
+    for key, line in (right or {}).items():
+        if key not in merged or _line_rank(line) > _line_rank(merged[key]):
+            merged[key] = line
+    return merged
+
+
+def _hitl_rank(event: dict) -> tuple:
+    """A resolved event beats its open version; otherwise the later resolution or raise wins."""
+    resolution = event.get("resolution") or {}
+    return (event.get("status") == "resolved", resolution.get("resolved_at", ""),
+            event.get("raised_at", ""), _canonical(event))
 
 
 def merge_hitl(left: list[HITLEvent] | None, right: list[HITLEvent] | None) -> list[HITLEvent]:
-    by_id = {event["event_id"]: event for event in (left or [])}
-    by_id.update({event["event_id"]: event for event in (right or [])})
+    """Upsert HITL events by event_id, keeping first-seen order. A resolved event is never reopened."""
+    by_id: dict[str, HITLEvent] = {}
+    for event in (left or []) + (right or []):
+        event_id = event["event_id"]
+        if event_id not in by_id or _hitl_rank(event) > _hitl_rank(by_id[event_id]):
+            by_id[event_id] = event
     return list(by_id.values())
 
 
@@ -114,23 +219,23 @@ class SilverFileState(TypedDict, total=False):
     session_id: str
     status: Literal["intake", "extracting", "rules", "computing", "review",
                     "awaiting_human", "complete", "escalated"]
-    messages: Annotated[list, add_messages]
-    intake: Annotated[dict[str, Answer], merge_answers]
+    messages: Annotated[list, add_messages]                             # intake dialogue only
+    intake: Annotated[dict[str, Answer], merge_answers]                 # keyed by question_id
     intake_complete: bool
-    documents: Annotated[list[DocumentRef], merge_documents]
-    extracted: Annotated[dict[str, ExtractedRecord], merge_extracted]
-    rules: dict
-    lines: Annotated[dict[str, LineValue], merge_lines]
-    review: dict
+    documents: Annotated[list[DocumentRef], merge_documents]            # dedupe by doc_id
+    extracted: Annotated[dict[str, ExtractedRecord], merge_extracted]   # keyed by doc_id; deterministic
+    rules: dict                                                         # contract section 8
+    lines: Annotated[dict[str, LineValue], merge_lines]                 # keyed by line
+    review: dict                                                        # {"passed", "issues", "iteration"}
     review_iterations: int
-    hitl: Annotated[list[HITLEvent], merge_hitl]
+    hitl: Annotated[list[HITLEvent], merge_hitl]                        # upsert by event_id
     handoffs: Annotated[list[AgentMessage], operator.add]
     route_history: Annotated[list[str], operator.add]
-    next_agent: str
-    rerun: list[str]
-    decisions_summary: str
-    token_log: Annotated[list[dict], operator.add]
-    outputs: dict
+    next_agent: str                                                     # ONLY the orchestrator writes this
+    rerun: list[str]                                                    # agents the orchestrator must re-run
+    decisions_summary: str                                              # rolling summary for the context strategy
+    token_log: Annotated[list[dict], operator.add]                      # {"agent", "item", "input_tokens", "strategy"}
+    outputs: dict                                                       # {"html", "pdf", "audit"}
     # Optional additions by Agent memory:
     intake_meta: dict        # Intake bookkeeping: pending question, glossed terms, attempts, drafts
     current_item: str        # batch item id used by selective recall (defaults to session_id)
