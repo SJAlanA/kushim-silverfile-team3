@@ -160,12 +160,11 @@ def _phrase(state: dict, template: str) -> tuple[str, dict]:
               + apply_context_strategy(state.get("messages", []), state, enabled)
               + [HumanMessage(content=f"Ask this next, as one plain-language question: {template}")])
     item = current_item(state)
-    model = llm.get_chat_model()
-    if model is not None:
+    if llm.get_llm() is not None:
         try:
-            response = model.invoke(prompt)
-            text = str(response.content).strip()
-            tokens = log_tokens(AGENT, item, response.usage_metadata["input_tokens"], enabled)
+            text, input_tokens = llm.invoke_with_usage(prompt)
+            text = text.strip()
+            tokens = log_tokens(AGENT, item, input_tokens, enabled)
             return (text if is_single_question(text) else template), tokens
         except Exception:  # noqa: BLE001 - any model failure falls back to the template
             pass
