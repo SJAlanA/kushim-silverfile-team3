@@ -25,7 +25,7 @@ from src import llm
 from src.agents import intake_parsing as parse
 from src.agents.intake_questions import (BY_ID, GLOSSARY, ORDINALS, SCHEDULE_FIELDS, SUB_KINDS, SUB_TEXT,
                                          next_question_id)
-from src.guardrails import classify_utterance
+from src.guardrails import check_outgoing, classify_utterance
 from src.hitl import raise_hitl
 from src.memory import apply_context_strategy, current_item, estimate_tokens, log_tokens, update_decisions_summary
 from src.security import redact_pii, validate_ssn
@@ -46,6 +46,7 @@ ADVICE_REPLY = ("That's a fair question, but it's tax advice, and SilverFile onl
 CONCERN_REPLY = "Thank you for telling me. I'm going to ask a volunteer to look at this before we go on."
 HELPER_REPLY = "Thank you. From here on, when I say \"you\", I mean the person this return is for."
 LOSS_REPLY = "I'm very sorry for your loss. A volunteer will help with the next part, so I've let them know."
+BLOCKED_REPLY = "Let me check that with a volunteer before I say more."
 RETRY_HINTS = {
     "yes_no": "A simple yes or no is fine.",
     "name": "Just the name is fine, using letters only.",
@@ -167,7 +168,8 @@ def _phrase(state: dict, template: str) -> tuple[str, dict]:
             text, input_tokens = llm.invoke_with_usage(prompt)
             text = text.strip()
             tokens = log_tokens(AGENT, item, input_tokens, enabled)
-            return (text if is_single_question(text) else template), tokens
+            usable = is_single_question(text) and check_outgoing(text, state.get("lines"))[0]
+            return (text if usable else template), tokens
         except Exception:  # noqa: BLE001 - any model failure falls back to the template
             pass
     rendered = "\n".join(f"{message.type}: {message.content}" for message in prompt)
@@ -508,7 +510,9 @@ def _doc_label(doc_type: str) -> str:
 
 
 def _ai(state: dict, text: str) -> AIMessage:
-    return AIMessage(content=text, additional_kwargs={"item": current_item(state)})
+    """Everything Intake says passes guardrails.check_outgoing first (no advice, no unsourced dollars)."""
+    allowed, _ = check_outgoing(text, state.get("lines"))
+    return AIMessage(content=text if allowed else BLOCKED_REPLY, additional_kwargs={"item": current_item(state)})
 
 
 def _human(state: dict, text: str) -> HumanMessage:

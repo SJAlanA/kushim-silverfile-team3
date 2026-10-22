@@ -186,3 +186,40 @@ def test_documents_and_dependents_can_be_given_conversationally(dialog, case_sin
         {"first_name": "Lucia", "last_name": "Delgado", "relationship": "She's my granddaughter", "ssn": "912-45-6603"}]
     assert [(doc["doc_id"], doc["path"]) for doc in state["documents"]] == [
         ("ssa_1", "data/fixtures/ssa_1.json"), ("w2_1", "demo/w2_image_1.jpg")]
+
+
+def test_all_fixed_intake_wording_passes_the_outgoing_check():
+    from src.guardrails import check_outgoing
+
+    texts = [question.text for question in QUESTIONS] + list(GLOSSARY.values()) + list(intake.RETRY_HINTS.values())
+    texts += [text.format(ordinal="first", name="Lucia", doc_type="W-2") for text in SUB_TEXT.values()]
+    texts += [intake.VOLUNTEERED_SSN_NOTICE, intake.UNCERTAIN_REPLY, intake.ADVICE_REPLY, intake.CONCERN_REPLY,
+              intake.HELPER_REPLY, intake.LOSS_REPLY]
+    assert all(check_outgoing(text)[0] for text in texts)
+
+
+def test_blocked_outgoing_text_is_replaced():
+    assert intake._ai({}, "You should file separately to save money.").content == intake.BLOCKED_REPLY
+    assert intake._ai({}, "Your refund will be $1,234.").content == intake.BLOCKED_REPLY
+
+
+def _fake_model(monkeypatch, reply: str):
+    monkeypatch.setattr(intake.llm, "get_llm", lambda: object())
+    monkeypatch.setattr(intake.llm, "invoke_with_usage", lambda messages: (reply, 321))
+
+
+def test_model_phrasing_that_gives_advice_falls_back_to_the_template(monkeypatch, intake_graph):
+    from conftest import Dialog
+
+    _fake_model(monkeypatch, "You should convert your IRA first. Are you the person this return is for?")
+    session = Dialog(intake_graph)
+    assert session.start()["text"] == QUESTIONS[0].text
+    assert session.state["token_log"][0] == {"agent": "intake", "item": "test-session", "input_tokens": 321,
+                                             "strategy": True, "estimated": False}
+
+
+def test_safe_model_phrasing_is_used(monkeypatch, intake_graph):
+    from conftest import Dialog
+
+    _fake_model(monkeypatch, "Is this tax return for you?")
+    assert Dialog(intake_graph).start()["text"] == "Is this tax return for you?"
