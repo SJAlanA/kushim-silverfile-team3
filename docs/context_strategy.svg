@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 320" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#333">
+<rect width="640" height="320" fill="#fff"/>
+<text x="56" y="24" font-size="15" font-weight="bold">Intake input tokens per taxpayer, one thread</text>
+<line x1="56" y1="264" x2="584" y2="264" stroke="#999"/>
+<line x1="56" y1="56" x2="56" y2="264" stroke="#999"/>
+<text x="48" y="60" text-anchor="end">136,398</text>
+<text x="48" y="268" text-anchor="end">0</text>
+<text x="56.0" y="284" text-anchor="middle">1</text><text x="114.7" y="284" text-anchor="middle">2</text><text x="173.3" y="284" text-anchor="middle">3</text><text x="232.0" y="284" text-anchor="middle">4</text><text x="290.7" y="284" text-anchor="middle">5</text><text x="349.3" y="284" text-anchor="middle">6</text><text x="408.0" y="284" text-anchor="middle">7</text><text x="466.7" y="284" text-anchor="middle">8</text><text x="525.3" y="284" text-anchor="middle">9</text><text x="584.0" y="284" text-anchor="middle">10</text>
+<text x="320.0" y="308" text-anchor="middle">Taxpayer in batch</text>
+<polyline points="56.0,255.6 114.7,230.3 173.3,223.0 232.0,208.3 290.7,166.0 349.3,135.8 408.0,151.0 466.7,142.3 525.3,74.9 584.0,109.9" fill="none" stroke="#c0392b" stroke-width="2.5"/><circle cx="56.0" cy="255.6" r="3.5" fill="#c0392b"/><circle cx="114.7" cy="230.3" r="3.5" fill="#c0392b"/><circle cx="173.3" cy="223.0" r="3.5" fill="#c0392b"/><circle cx="232.0" cy="208.3" r="3.5" fill="#c0392b"/><circle cx="290.7" cy="166.0" r="3.5" fill="#c0392b"/><circle cx="349.3" cy="135.8" r="3.5" fill="#c0392b"/><circle cx="408.0" cy="151.0" r="3.5" fill="#c0392b"/><circle cx="466.7" cy="142.3" r="3.5" fill="#c0392b"/><circle cx="525.3" cy="74.9" r="3.5" fill="#c0392b"/><circle cx="584.0" cy="109.9" r="3.5" fill="#c0392b"/>
+<polyline points="56.0,255.6 114.7,250.0 173.3,254.3 232.0,254.0 290.7,247.9 349.3,245.9 408.0,251.5 466.7,252.8 525.3,246.7 584.0,252.8" fill="none" stroke="#2471a3" stroke-width="2.5"/><circle cx="56.0" cy="255.6" r="3.5" fill="#2471a3"/><circle cx="114.7" cy="250.0" r="3.5" fill="#2471a3"/><circle cx="173.3" cy="254.3" r="3.5" fill="#2471a3"/><circle cx="232.0" cy="254.0" r="3.5" fill="#2471a3"/><circle cx="290.7" cy="247.9" r="3.5" fill="#2471a3"/><circle cx="349.3" cy="245.9" r="3.5" fill="#2471a3"/><circle cx="408.0" cy="251.5" r="3.5" fill="#2471a3"/><circle cx="466.7" cy="252.8" r="3.5" fill="#2471a3"/><circle cx="525.3" cy="246.7" r="3.5" fill="#2471a3"/><circle cx="584.0" cy="252.8" r="3.5" fill="#2471a3"/>
+<rect x="414" y="40" width="12" height="12" fill="#c0392b"/><text x="432" y="50">No strategy</text>
+<rect x="414" y="60" width="12" height="12" fill="#2471a3"/><text x="432" y="70">Selective recall</text>
+</svg>
