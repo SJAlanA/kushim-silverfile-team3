@@ -1,0 +1,54 @@
+{
+  "case_id": "batch_03",
+  "description": "Batch intake 3: hoh, 2 documents, clean run",
+  "answers": {
+    "who_is_answering": "yes",
+    "taxpayer_first_name": "Rosa",
+    "taxpayer_last_name": "Delgado",
+    "taxpayer_ssn": "903-13-1111",
+    "taxpayer_dob": "1958-11-23",
+    "taxpayer_blind": false,
+    "can_be_claimed_as_dependent": false,
+    "filing_status": "hoh",
+    "dual_status_alien": false,
+    "dependents": [
+      {
+        "first_name": "Lucia",
+        "last_name": "Delgado",
+        "relationship": "granddaughter",
+        "ssn": "912-45-6603"
+      }
+    ],
+    "other_income": {
+      "has_other_income": false,
+      "description": ""
+    },
+    "adjustments": 0,
+    "schedule_values": {
+      "sch1_line10": 0,
+      "sch2_line3": 0,
+      "sch2_line21": 0,
+      "sch3_line8": 0,
+      "sch3_line15": 0
+    },
+    "estimated_payments": 0,
+    "refund_destination": "My own checking account"
+  },
+  "documents": [
+    {
+      "doc_id": "w2_1",
+      "doc_type": "W2",
+      "path": "data/fixtures/batch/docs/case_03_w2_1.json"
+    },
+    {
+      "doc_id": "ssa_1",
+      "doc_type": "SSA-1099",
+      "path": "data/fixtures/batch/docs/case_03_ssa_1.json"
+    }
+  ],
+  "hitl_resolutions": [],
+  "expected": {
+    "lines": {},
+    "hitl_conditions": []
+  }
+}

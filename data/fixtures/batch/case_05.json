@@ -1,0 +1,58 @@
+{
+  "case_id": "batch_05",
+  "description": "Batch intake 5: mfj, 3 documents, clean run",
+  "answers": {
+    "who_is_answering": "yes",
+    "taxpayer_first_name": "June",
+    "taxpayer_last_name": "Nakamura",
+    "taxpayer_ssn": "905-15-1185",
+    "taxpayer_dob": "1957-05-09",
+    "taxpayer_blind": false,
+    "can_be_claimed_as_dependent": false,
+    "filing_status": "mfj",
+    "spouse_died_in_2025": false,
+    "spouse_first_name": "Alex",
+    "spouse_last_name": "Nakamura",
+    "spouse_ssn": "954-25-2205",
+    "spouse_dob": "1956-06-06",
+    "spouse_blind": false,
+    "dual_status_alien": false,
+    "dependents": [],
+    "other_income": {
+      "has_other_income": false,
+      "description": ""
+    },
+    "adjustments": 0,
+    "schedule_values": {
+      "sch1_line10": 0,
+      "sch2_line3": 0,
+      "sch2_line21": 0,
+      "sch3_line8": 0,
+      "sch3_line15": 0
+    },
+    "estimated_payments": 1200,
+    "refund_destination": "Our joint checking account"
+  },
+  "documents": [
+    {
+      "doc_id": "w2_1",
+      "doc_type": "W2",
+      "path": "data/fixtures/batch/docs/case_05_w2_1.json"
+    },
+    {
+      "doc_id": "w2_2",
+      "doc_type": "W2",
+      "path": "data/fixtures/batch/docs/case_05_w2_2.json"
+    },
+    {
+      "doc_id": "int_1",
+      "doc_type": "1099-INT",
+      "path": "data/fixtures/batch/docs/case_05_int_1.json"
+    }
+  ],
+  "hitl_resolutions": [],
+  "expected": {
+    "lines": {},
+    "hitl_conditions": []
+  }
+}

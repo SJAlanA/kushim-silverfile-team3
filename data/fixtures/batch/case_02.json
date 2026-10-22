@@ -1,0 +1,58 @@
+{
+  "case_id": "batch_02",
+  "description": "Batch intake 2: mfj, 3 documents, clean run",
+  "answers": {
+    "who_is_answering": "yes",
+    "taxpayer_first_name": "Walter",
+    "taxpayer_last_name": "Okafor",
+    "taxpayer_ssn": "902-12-1074",
+    "taxpayer_dob": "1952-07-02",
+    "taxpayer_blind": false,
+    "can_be_claimed_as_dependent": false,
+    "filing_status": "mfj",
+    "spouse_died_in_2025": false,
+    "spouse_first_name": "Alex",
+    "spouse_last_name": "Okafor",
+    "spouse_ssn": "951-22-2082",
+    "spouse_dob": "1956-06-06",
+    "spouse_blind": false,
+    "dual_status_alien": false,
+    "dependents": [],
+    "other_income": {
+      "has_other_income": false,
+      "description": ""
+    },
+    "adjustments": 0,
+    "schedule_values": {
+      "sch1_line10": 0,
+      "sch2_line3": 0,
+      "sch2_line21": 0,
+      "sch3_line8": 0,
+      "sch3_line15": 0
+    },
+    "estimated_payments": 500,
+    "refund_destination": "Our joint checking account"
+  },
+  "documents": [
+    {
+      "doc_id": "ssa_1",
+      "doc_type": "SSA-1099",
+      "path": "data/fixtures/batch/docs/case_02_ssa_1.json"
+    },
+    {
+      "doc_id": "r_1",
+      "doc_type": "1099-R",
+      "path": "data/fixtures/batch/docs/case_02_r_1.json"
+    },
+    {
+      "doc_id": "div_1",
+      "doc_type": "1099-DIV",
+      "path": "data/fixtures/batch/docs/case_02_div_1.json"
+    }
+  ],
+  "hitl_resolutions": [],
+  "expected": {
+    "lines": {},
+    "hitl_conditions": []
+  }
+}
