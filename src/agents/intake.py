@@ -402,12 +402,11 @@ def _read_refund(redacted: str) -> Step:
 
 
 def _record(state: dict, meta: dict, qid: str, step: Step, update: dict, notes: list[str]) -> dict:
-    """Store a final answer, keeping any earlier value in history, then raise any concern."""
-    intake = state.get("intake", {})
-    old = intake.get(qid)
+    """Store a final answer, then raise any concern. The merge_answers reducer moves a changed
+    value's previous version into history; Intake only carries the existing history forward."""
+    old = state.get("intake", {}).get(qid)
     raw_text = _SSN_IN_TEXT if BY_ID[qid].sensitive else update["messages"][0].content
-    history = (old["history"] + [{"value": old["value"], "raw_text": old["raw_text"],
-                                  "answered_at": old["answered_at"]}]) if old else []
+    history = list(old["history"]) if old else []
     update["intake"] = {qid: {"value": step.value, "raw_text": raw_text, "answered_at": _now(), "history": history}}
     update.update(step.extra)
     if old and old["value"] != step.value:

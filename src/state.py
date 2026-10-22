@@ -72,13 +72,14 @@ class AgentMessage(TypedDict):
 
 
 def merge_answers(left: dict[str, Answer] | None, right: dict[str, Answer] | None) -> dict[str, Answer]:
-    """Merge intake answers; a changed answer keeps every earlier version in `history`."""
+    """Merge by question_id; when a value changes, the old version is appended to `history`."""
     merged = dict(left or {})
     for question_id, new in (right or {}).items():
         old = merged.get(question_id)
-        if old is not None and len(new.get("history", [])) < len(old.get("history", [])):
-            new = {**new, "history": old["history"] + [_snapshot(old)]}
-        merged[question_id] = new
+        history = list(old["history"]) if old else []
+        if old is not None and old["value"] != new["value"]:
+            history.append(_snapshot(old))
+        merged[question_id] = {**new, "history": history}
     return merged
 
 

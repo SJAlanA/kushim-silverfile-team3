@@ -50,6 +50,18 @@ def test_changed_answer_is_kept_in_history_and_confirmed(dialog, case_single):
     assert "Thanks, I've updated your date of birth." in _assistant_text(dialog.state)
 
 
+def test_each_change_is_recorded_once_in_history(dialog, case_single):
+    dialog.answer_until(case_single, "taxpayer_blind")
+    for new_date in ("April 2, 1954", "May 5, 1953"):
+        dialog.say("I need to change my date of birth")
+        dialog.say(new_date)
+    dialog.say("change my date of birth")
+    dialog.say("May 5, 1953")  # same value again: nothing new to record
+    dob = dialog.state["intake"]["taxpayer_dob"]
+    assert dob["value"] == "1953-05-05"
+    assert [entry["value"] for entry in dob["history"]] == ["1955-03-14", "1954-04-02"]
+
+
 def test_go_back_reasks_previous_question_without_losing_answers(dialog, case_single):
     dialog.answer_until(case_single, "taxpayer_dob")
     answered_before = set(dialog.state["intake"])
