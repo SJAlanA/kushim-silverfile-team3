@@ -88,9 +88,11 @@ def _snapshot(answer: Answer) -> dict:
 
 
 def merge_documents(left: list[DocumentRef] | None, right: list[DocumentRef] | None) -> list[DocumentRef]:
-    by_id = {doc["doc_id"]: doc for doc in (left or [])}
-    by_id.update({doc["doc_id"]: doc for doc in (right or [])})
-    return [by_id[key] for key in sorted(by_id)]
+    """Dedupe by doc_id, keeping first-seen order (contract section 3); a later entry updates in place."""
+    by_id: dict[str, DocumentRef] = {}
+    for doc in (left or []) + (right or []):
+        by_id[doc["doc_id"]] = doc  # dicts keep insertion order, so the first position is kept
+    return list(by_id.values())
 
 
 def merge_extracted(left: dict | None, right: dict | None) -> dict:
