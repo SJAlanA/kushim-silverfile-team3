@@ -139,11 +139,10 @@ def parse_filing_status(text: str) -> tuple[str | None, bool]:
 
 
 def find_doc_types(text: str) -> list[str]:
+    """Document types in the order the person mentioned them."""
     lowered = normalize(text)
-    found = []
-    for doc_type, pattern in _DOC_TYPES:
-        found += [doc_type] * len(pattern.findall(lowered))
-    return found
+    found = [(match.start(), doc_type) for doc_type, pattern in _DOC_TYPES for match in pattern.finditer(lowered)]
+    return [doc_type for _, doc_type in sorted(found)]
 
 
 def parse_navigation(text: str) -> tuple[str, str | None] | None:
