@@ -18,13 +18,14 @@ written must not stop a tax return being drafted.
 from __future__ import annotations
 
 import contextvars
+import functools
 import json
 import os
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 _session_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("silverfile_session", default=None)
 _node: contextvars.ContextVar[str | None] = contextvars.ContextVar("silverfile_node", default=None)
@@ -79,6 +80,18 @@ def traced_node(agent: str) -> Iterator[None]:
         write_event({"kind": "node_end", "agent": agent, "outcome": outcome,
                      "duration_ms": round((time.perf_counter() - started) * 1000, 2)})
         _node.reset(token)
+
+
+def traced_agent(agent: str, run: Callable[[dict], dict]) -> Callable[[dict], dict]:
+    """Wrap an agent's `run(state)` so every call is traced to its session, e.g. in src/graph.py:
+
+        graph.add_node("intake", traced_agent("intake", intake.run))
+    """
+    @functools.wraps(run)
+    def node(state: dict) -> dict:
+        with session(state.get("session_id")), traced_node(agent):
+            return run(state)
+    return node
 
 
 def _safe_name(session_id: str) -> str:
