@@ -133,7 +133,8 @@ def _line(key: str, results: list[dict], sources: list[dict]) -> dict:
 def _sum(ctx: Context, key: str, items: list[Item], before: list[dict] | None = None) -> dict:
     """Line = sum of items, via the `add` tool."""
     result = ctx.tool("add", values=[i[0] for i in items], labels=[i[1] for i in items])
-    return _line(key, (before or []) + [result], [i[2] for i in items])
+    sources = [i[2] for i in items] or [{"none": f"No document or answer reports an amount for line {key}"}]
+    return _line(key, [*(before or []), result], sources)
 
 
 def _doc_items(ctx: Context, family: str, field_name: str, label: str) -> list[Item]:
@@ -423,9 +424,12 @@ _check_order(STEPS)
 
 def requested_lines(state: dict) -> list[str] | None:
     """Lines Review asked to recompute since Computation last handed off, or None for everything."""
-    handoffs = state.get("handoffs", [])
-    last_own = max((i for i, m in enumerate(handoffs) if m["from_agent"] == AGENT), default=-1)
-    pending = [m for m in messages_for(handoffs[last_own + 1:], AGENT, "send_back")]
+    since_last_run: list[dict] = []
+    for message in reversed(state.get("handoffs", [])):
+        if message["from_agent"] == AGENT:
+            break
+        since_last_run.insert(0, message)
+    pending = messages_for(since_last_run, AGENT, "send_back")
     asked = [key for m in pending for key in m.get("payload", {}).get("lines", []) if key in LINE_KEYS]
     return asked or None
 
