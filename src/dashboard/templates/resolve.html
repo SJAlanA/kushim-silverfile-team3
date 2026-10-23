@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Resolve {{ event.condition }}{% endblock %}
+{% block content %}
+{% set first = s.intake.get("taxpayer_first_name") if s.intake else None %}
+<p class="meta crumb"><a href="{{ url_for('session', session_id=session_id) }}">{{ first.value if first else session_id }}</a></p>
+<h1>{{ event.condition|replace("_", " ")|lower|capitalize }}</h1>
+<p class="lead">{{ event.reason }}</p>
+<dl class="facts">
+  <dt>Raised by</dt><dd>{{ event.raised_by|replace("_", " ")|capitalize }}</dd>
+  <dt>Raised</dt><dd>{{ event.raised_at|when }}</dd>
+  {% for key, value in (event.details or {}).items() if key != "fingerprint" %}
+    <dt>{{ key|replace("_", " ")|capitalize }}</dt><dd>{{ value|plain }}</dd>
+  {% endfor %}
+</dl>
+
+{% if event.status == "resolved" %}
+  <p class="notice notice-ok">Resolved: {{ event.resolution.decision }} by {{ event.resolution.resolved_by }} on {{ event.resolution.resolved_at|when }}.{% if event.resolution.note %} Note: {{ event.resolution.note }}{% endif %}</p>
+{% else %}
+<form method="post" class="resolve">
+  <fieldset>
+    <legend>What should happen next?</legend>
+    {% for value, label in decisions.items() %}
+      <label class="choice"><input type="radio" name="decision" value="{{ value }}" required
+        {% if form.get("decision") == value or (not form.get("decision") and loop.first) %}checked{% endif %}> {{ label }}</label>
+    {% endfor %}
+  </fieldset>
+  <label for="updates">Corrected answers <span class="hint">Optional. One per line, like <code>filing_status = single</code>.</span></label>
+  <textarea id="updates" name="updates" rows="3">{{ form.get("updates", "") }}</textarea>
+  <label for="note">Note for the audit record</label>
+  <textarea id="note" name="note" rows="3">{{ form.get("note", "") }}</textarea>
+  <label for="resolved_by">Your name</label>
+  <input id="resolved_by" name="resolved_by" required autocomplete="name" value="{{ form.get('resolved_by', '') }}">
+  <button type="submit">Save decision</button>
+</form>
+{% endif %}
+{% endblock %}

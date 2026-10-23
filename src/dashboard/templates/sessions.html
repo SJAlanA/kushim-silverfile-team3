@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Sessions</h1>
+{% for key, label in labels %}
+  {% set rows = groups[key] %}
+  <section class="group group-{{ key }}" aria-labelledby="h-{{ key }}">
+    <h2 id="h-{{ key }}">{{ label }} <span class="count">{{ rows|length }}</span></h2>
+    {% if rows %}
+    <table>
+      <thead><tr><th>Taxpayer</th><th>Status</th><th class="num">Open events</th><th>Last updated</th><th><span class="sr-only">Session</span></th></tr></thead>
+      <tbody>
+      {% for row in rows %}
+        <tr>
+          <td>{{ row.taxpayer or "Not given yet" }}</td>
+          <td>{% with status=row.status %}{% include "_pill.html" %}{% endwith %}</td>
+          <td class="num">{{ row.open_hitl or "" }}</td>
+          <td>{{ row.updated_at|when }}</td>
+          <td class="end"><a href="{{ url_for('session', session_id=row.session_id) }}">Open {{ row.session_id }}</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="empty">{% if key == "needs_human" %}Nothing is waiting for a volunteer.{% elif key == "in_progress" %}No sessions are running. Start one with <code>python run.py --interactive</code>.{% else %}No finished returns yet.{% endif %}</p>
+    {% endif %}
+  </section>
+{% endfor %}
+{% endblock %}
