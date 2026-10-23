@@ -10,9 +10,9 @@ SilverFile is a LangGraph multi-agent system that drafts Form 1040-SR for Kushim
 | --- | --- | --- |
 | Agent memory | Mohammed | Intake |
 | Inter agent communication | Hamdan | Document Extraction |
-| Task division and management | Ishitha | Orchestrator |
-| MLOps/DevOps | Siddharth | Computation |
-| Guardrails and ethics | Parth | Eligibility & Rules |
+| Task division and management | Siddharth | Orchestrator |
+| MLOps/DevOps | Parth | Computation |
+| Guardrails and ethics | Ishitha | Eligibility & Rules |
 | Security | Alan (SJAlanA) | Review / Audit |
 
 ## Repository layout
