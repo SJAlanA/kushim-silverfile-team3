@@ -88,8 +88,7 @@ def test_review_limit_resolved_with_continue_finalizes():
 
 
 def test_out_of_scope_rules_raise_an_event_once():
-    state = ruled(rules={"in_scope": False})
-    seen(state, "eligibility")
+    state = seen(base(rules={"in_scope": False}), "eligibility")
     update = orch.run(state)
     assert update["next_agent"] == "human_review"
     assert update["hitl"][0]["condition"] == "OUT_OF_SCOPE"
