@@ -1,0 +1,46 @@
+# docker compose up                     -> staff dashboard on http://localhost:8000
+# docker compose run --rm app python run.py --case demo/eval_case_1/case.json
+# docker compose run --rm app python run.py --interactive
+#
+# Both services share one image and one checkpoint database, so a run paused on a HITL event
+# can be resolved in the dashboard. Drafts land in ./outputs and traces in ./traces on the host.
+# Offline by default; to use Claude, put ANTHROPIC_API_KEY in .env and run with SILVERFILE_OFFLINE=0.
+
+x-silverfile: &silverfile
+  build: .
+  image: silverfile:latest
+  env_file:
+    - path: .env
+      required: false
+  environment:                         # these win over .env, which holds host-side values
+    SILVERFILE_OFFLINE: ${SILVERFILE_OFFLINE:-1}
+    DASHBOARD_HOST: 0.0.0.0
+    CHECKPOINT_DB: /app/state/silverfile_checkpoints.sqlite
+    SILVERFILE_TRACE_DIR: /app/traces
+    TAX_MATH_INPROCESS: "0"
+  volumes:
+    - ./outputs:/app/outputs
+    - ./traces:/app/traces
+    - silverfile-state:/app/state      # checkpoint DB: sessions survive container restarts
+
+services:
+  dashboard:
+    <<: *silverfile
+    command: ["python", "run.py", "--dashboard"]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  app:
+    <<: *silverfile
+    profiles: ["cli"]                  # only runs when named: docker compose run --rm app ...
+    command: ["python", "run.py", "--case", "demo/eval_case_1/case.json"]
+    stdin_open: true
+    tty: true
+
+volumes:
+  silverfile-state:
