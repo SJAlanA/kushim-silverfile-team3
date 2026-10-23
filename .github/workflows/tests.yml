@@ -1,0 +1,51 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: pytest (offline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SILVERFILE_OFFLINE: "1"
+      ANTHROPIC_API_KEY: ""
+      TAX_MATH_INPROCESS: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements.lock
+      - name: Install tesseract
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends tesseract-ocr
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.lock ]; then pip install -r requirements.lock; else pip install -r requirements.txt; fi
+      - name: Run tests
+        run: python -m pytest -q
+      - name: tax_math over MCP stdio
+        env:
+          TAX_MATH_INPROCESS: "0"
+        run: python -m pytest -q tests/test_mcp_stdio.py
+
+  docker:
+    name: docker image builds and runs tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: docker compose build
+      - name: Test inside the image
+        run: docker compose run --rm -T app python -m pytest -q tests/test_tax_math.py tests/test_computation.py tests/test_mcp_stdio.py
