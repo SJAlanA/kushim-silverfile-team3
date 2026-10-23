@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}{{ session_id }}{% endblock %}
+{% block content %}
+{% set first = s.intake.get("taxpayer_first_name") if s.intake else None %}
+<div class="page-head">
+  <h1>{{ first.value if first else "New taxpayer" }}</h1>
+  {% with status=s.status or "intake" %}{% include "_pill.html" %}{% endwith %}
+</div>
+<p class="meta">Session {{ session_id }}</p>
+
+{% set open = s.hitl|selectattr("status", "equalto", "open")|list if s.hitl else [] %}
+{% if open %}
+<section class="callout" aria-labelledby="h-open">
+  <h2 id="h-open">Waiting for a volunteer</h2>
+  {% for event in open %}
+    <p><strong>{{ event.condition|replace("_", " ")|lower|capitalize }}.</strong> <span>{{ event.reason }}</span>
+       <a class="button" href="{{ url_for('resolve', session_id=session_id, event_id=event.event_id) }}">Resolve</a></p>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if s.outputs %}
+<section aria-labelledby="h-out">
+  <h2 id="h-out">Draft return</h2>
+  <ul class="links">
+    {% for kind, label in (("html", "Form 1040-SR (web page)"), ("pdf", "Form 1040-SR (PDF)"), ("audit", "Audit record (audit.json)")) %}
+      {% if s.outputs.get(kind) %}<li><a href="{{ url_for('output', session_id=session_id, kind=kind) }}">{{ label }}</a></li>{% endif %}
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<div class="columns">
+  <div>
+    <section aria-labelledby="h-lines">
+      <h2 id="h-lines">Return lines</h2>
+      {% if s.lines %}
+      <table>
+        <thead><tr><th>Line</th><th class="num">Amount</th><th>How it was worked out</th></tr></thead>
+        <tbody>
+        {% for key, line in s.lines.items() %}
+          <tr>
+            <td>{{ key }}</td>
+            <td class="num">{{ line.value|dollars }}</td>
+            <td>{{ line.provenance.formula }}
+              <span class="source">{{ line.provenance.tool }}{% for src in line.provenance.sources %} · {{ src.doc_id or ("answer: " ~ src.intake) }}{% if src.field %} {{ src.field }}{% endif %}{% endfor %}</span></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<p class="empty">No lines yet. They appear once Computation has run.</p>{% endif %}
+    </section>
+
+    <section aria-labelledby="h-docs">
+      <h2 id="h-docs">Documents</h2>
+      {% if s.extracted %}
+      <table>
+        <thead><tr><th>Document</th><th>Read by</th><th class="num">Confidence</th><th>Values read</th></tr></thead>
+        <tbody>
+        {% for doc_id, record in s.extracted.items() %}
+          <tr>
+            <td>{{ record.doc_type }} <span class="source">{{ doc_id }}</span></td>
+            <td>{{ record.extractor }}</td>
+            <td class="num">{{ "%.0f"|format(record.confidence * 100) }}%</td>
+            <td>{% for field, value in record.fields.items() %}<span class="field">{{ field }} {{ value|dollars }}</span>{% endfor %}
+              {% for warning in record.warnings or [] %}<span class="warning">{{ warning }}</span>{% endfor %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% elif s.documents %}<p class="empty">{{ s.documents|length }} document(s) listed, not read yet.</p>
+      {% else %}<p class="empty">No documents listed yet.</p>{% endif %}
+    </section>
+
+    <section aria-labelledby="h-review">
+      <h2 id="h-review">Review</h2>
+      {% if s.review %}
+        <p>{{ "Passed" if s.review.passed else "Found problems" }} after {{ s.review_iterations or s.review.iteration or 1 }} round(s).</p>
+        {% if s.review.issues %}<ul>{% for issue in s.review.issues %}<li>{{ issue if issue is string else issue|plain }}</li>{% endfor %}</ul>{% endif %}
+      {% else %}<p class="empty">Review hasn't run yet.</p>{% endif %}
+      {% if review_notes %}
+        <ol class="notes">{% for note in review_notes %}<li>{{ note.kind|replace("_", " ")|capitalize }} to {{ note.to_agent }}: {{ note.reason }}</li>{% endfor %}</ol>
+      {% endif %}
+    </section>
+  </div>
+
+  <aside>
+    <section aria-labelledby="h-answers">
+      <h2 id="h-answers">Answers so far</h2>
+      {% if answers %}
+      <dl>{% for topic, value in answers %}<dt>{{ topic }}</dt><dd>{{ value|plain }}</dd>{% endfor %}</dl>
+      {% else %}<p class="empty">No answers yet.</p>{% endif %}
+    </section>
+    {% if s.hitl %}
+    <section aria-labelledby="h-events">
+      <h2 id="h-events">Volunteer decisions</h2>
+      <ul class="events">
+      {% for event in s.hitl %}
+        <li><strong>{{ event.condition|replace("_", " ")|lower|capitalize }}</strong>
+          {% if event.status == "resolved" %}— {{ event.resolution.decision }} by {{ event.resolution.resolved_by }}{% if event.resolution.note %}: “{{ event.resolution.note }}”{% endif %}
+          {% else %}— open{% endif %}</li>
+      {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </aside>
+</div>
+{% endblock %}

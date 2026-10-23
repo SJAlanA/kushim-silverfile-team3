@@ -20,3 +20,4 @@ traces/*
 .DS_Store
 .vscode/
 .idea/
+outputs/

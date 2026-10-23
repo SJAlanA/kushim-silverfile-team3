@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Waiting for review{% endblock %}
+{% block content %}
+<h1>Waiting for review</h1>
+{% if items %}
+<table>
+  <thead><tr><th>Taxpayer</th><th>What happened</th><th>Raised by</th><th>Raised</th><th><span class="sr-only">Action</span></th></tr></thead>
+  <tbody>
+  {% for row, event in items %}
+    <tr>
+      <td>{{ row.taxpayer or row.session_id }}</td>
+      <td><strong class="condition">{{ event.condition|replace("_", " ")|lower|capitalize }}</strong><br>{{ event.reason }}</td>
+      <td>{{ event.raised_by|replace("_", " ")|capitalize }}</td>
+      <td>{{ event.raised_at|when }}</td>
+      <td class="end"><a class="button" href="{{ url_for('resolve', session_id=row.session_id, event_id=event.event_id) }}">Resolve</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">Nothing is waiting for a volunteer.</p>
+{% endif %}
+{% endblock %}
