@@ -2,11 +2,11 @@
 
 ## What this area owns
 
-The reference corpus (`data/policy.md`), the Eligibility & Rules agent, the HITL event helpers (`src/hitl.py`) and the two guardrails (`src/guardrails.py`): one that reads what the taxpayer says, one that checks what SilverFile says back.
+The reference corpus (`data/policy.md`), the Eligibility & Rules agent, the HITL helpers (`src/hitl.py`) and two guardrails (`src/guardrails.py`): one reads what the taxpayer says, one checks what SilverFile says back.
 
 ## Decision table first, model second
 
-Eligibility is a pure decision table (`eligibility_rules.decide`). Every finding names a rule ID from `policy.md`, and the agent checks at run time that the ID exists, so a citation can't point at nothing. Online, a model gets the policy and only yes/no facts (no names, SSNs or exact birth dates) and answers the same questions. Disagreements are recorded in `rules["llm_check"]`; the table always wins. We chose this order because a wrong filing-status or box count silently changes dollars, and a table can be tested exhaustively (every status × box combination is in `test_decision_table.py`).
+Eligibility is a pure decision table (`eligibility_rules.decide`). Every finding names a rule ID from `policy.md`, and the agent checks at run time that the ID exists, so a citation can't point at nothing. Online, a model gets the policy and only yes/no facts (no names, SSNs or exact birth dates) and answers the same questions. Disagreements are recorded in `rules["llm_check"]`; the table always wins. A wrong box count silently changes dollars, and a table can be tested exhaustively (every status × box combination is in `test_decision_table.py`).
 
 ## How each escalation is detected
 
@@ -16,7 +16,7 @@ Eligibility is a pure decision table (`eligibility_rules.decide`). Every finding
 - **Filing status:** spouse died in 2025; qualifying surviving spouse or head of household with no dependent listed.
 - **Document conflict:** the W-2 name and SSN last four against the taxpayer (either spouse on a joint return). Reasons never contain digits.
 - **Exploitation:** see below.
-- **Unclassifiable:** other income that matches nothing raises UNCERTAIN instead of being assumed in scope.
+- **Unclassifiable:** other income that matches nothing raises UNCERTAIN, never assumed in scope.
 
 ## Notice and stop
 
@@ -32,6 +32,5 @@ The orchestrator reruns Eligibility whenever an answer or document changes. Befo
 - Third-party and pressure patterns are phrase based. Indirect wording ("Dave said it would be easier if he took care of it") is missed.
 - "Foreign" and "stocks" only count in the other-income answer, so a mention elsewhere is missed. A pension "from Canada" becomes UNCERTAIN, not OUT_OF_SCOPE, which still reaches a person.
 - A W-2 for a spouse on a separate return is treated as a conflict.
-- Spouse boxes on a separate return are counted as the brief says, with a note to confirm.
-- A user who says "no wages" while a W-2 exists isn't detected, because Intake has no such question; only name and SSN mismatches are.
+- "No wages" versus an existing W-2 isn't detected, because Intake has no such question; only name and SSN mismatches are.
 - Death date isn't collected, so a spouse who turned 65 during 2025 is counted by the end-of-year rule.
