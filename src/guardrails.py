@@ -29,7 +29,8 @@ _ADVICE_PATTERNS = [re.compile(p) for p in (
     r"\bwould (i|we) (pay|owe) (less|more)\b",
     r"\bpay (less|fewer|lower) (tax|taxes)\b",
     r"\bcan (i|we) (deduct|write off|claim|get a deduction)\b",
-    r"\b(is|are) \w+( \w+)? (tax )?deductible\b",
+    r"\btax[- ]deductible\b",
+    r"\b(is|are|was|were) [^.?!]{1,40}\bdeductible\b",
     r"\bwrite[- ]?offs?\b",
     r"\bis it (better|smarter|wiser|worth)\b",
     r"\b(better|best|smarter) (for me )?to (file|convert|take|claim|wait)\b",
@@ -48,15 +49,17 @@ _ADVICE_PATTERNS = [re.compile(p) for p in (
     r"\bhow (can|do|could) (i|we) (pay less|save|lower|reduce)\b",
 )]
 # "Should I" is advice unless it is about answering the question in front of the person.
-_SHOULD = re.compile(r"\bshould (i|we)\b([^.?!]*)")
-_PROCEDURAL = re.compile(r"\b(answer|say|type|enter|write|spell|use|put|include|upload|attach|bring|call|wait|"
+_SHOULD = re.compile(r"\bshould (?:i|we)\b([^.?!]*)|"
+                     r"\b(?:do you think|wonder(?:ing)? (?:if|whether)|not sure (?:if|whether)|tell me (?:if|whether)|"
+                     r"know (?:if|whether)|ask(?:ing)? (?:if|whether)) (?:i|we) should\b([^.?!]*)")
+_PROCEDURAL = re.compile(r"\b(answer|say|type|enter|write|spell|use|put|include|upload|attach|bring|call|"
                          r"click|press|start|continue|repeat|go back|read|send|scan|photograph|sign in|log in)\b")
 
 
 def _asks_for_advice(lowered: str) -> bool:
     if any(pattern.search(lowered) for pattern in _ADVICE_PATTERNS):
         return True
-    return any(not _PROCEDURAL.search(rest) for _, rest in _SHOULD.findall(lowered))
+    return any(not _PROCEDURAL.search(first + second) for first, second in _SHOULD.findall(lowered))
 
 
 # ---------------------------------------------------------------------------

@@ -88,7 +88,7 @@ def resolve_event(event: dict, resume_payload: dict) -> dict:
     "updates": {question_id: value}}. The decision is checked here; `send_back:<agent>` is
     accepted for any agent name and checked against the real node names by the graph.
     """
-    decision = resume_payload.get("decision", "")
+    decision = str(resume_payload.get("decision") or "")
     if decision not in DECISIONS and not (decision.startswith(SEND_BACK) and decision[len(SEND_BACK):]):
         allowed = ", ".join([*DECISIONS, f"{SEND_BACK}<agent>"])
         raise ValueError(f"decision {decision!r} is not one of {allowed}")
