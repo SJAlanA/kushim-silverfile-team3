@@ -1,0 +1,77 @@
+{
+  "case_id": "eval_case_2",
+  "description": "HITL run: the taxpayer's spouse died in August 2025, so the filing status is ambiguous (joint, qualifying surviving spouse or single). A volunteer must choose. After they choose joint, the run finishes with a draft return.",
+  "answers": {
+    "who_is_answering": "yes",
+    "taxpayer_first_name": "Rosa",
+    "taxpayer_last_name": "Delgado",
+    "taxpayer_ssn": "902-22-4518",
+    "taxpayer_dob": "1957-03-14",
+    "taxpayer_blind": false,
+    "can_be_claimed_as_dependent": false,
+    "filing_status": "mfj",
+    "spouse_died_in_2025": true,
+    "spouse_first_name": "Luis",
+    "spouse_last_name": "Delgado",
+    "spouse_ssn": "902-22-4519",
+    "spouse_dob": "1959-09-02",
+    "spouse_blind": false,
+    "dual_status_alien": false,
+    "dependents": [],
+    "other_income": {
+      "has_other_income": false,
+      "description": ""
+    },
+    "adjustments": 0,
+    "schedule_values": {
+      "sch1_line10": 0,
+      "sch2_line3": 0,
+      "sch2_line21": 0,
+      "sch3_line8": 0,
+      "sch3_line15": 0
+    },
+    "estimated_payments": 0,
+    "refund_destination": "My own checking account at Tompkins Community Bank"
+  },
+  "documents": [
+    {
+      "doc_id": "w2_1",
+      "doc_type": "W2",
+      "path": "demo/w2_image_2.jpg"
+    },
+    {
+      "doc_id": "ssa_1",
+      "doc_type": "SSA-1099",
+      "path": "data/fixtures/ssa1099_1.json"
+    },
+    {
+      "doc_id": "int_1",
+      "doc_type": "1099-INT",
+      "path": "data/fixtures/1099int_1.json"
+    }
+  ],
+  "hitl_resolutions": [
+    {
+      "condition": "FILING_STATUS_AMBIGUITY",
+      "decision": "continue",
+      "resolved_by": "Volunteer preparer (case file)",
+      "note": "Spouse died in August 2025 and the taxpayer has not remarried, so a joint return is allowed for 2025 (policy.md#r-fs-02). Chose married filing jointly.",
+      "updates": {
+        "filing_status": "mfj"
+      }
+    }
+  ],
+  "expected": {
+    "lines": {
+      "1z": 18500,
+      "6b": 0,
+      "11a": 18800,
+      "12e": 34700,
+      "13b": 12000,
+      "15": 0,
+      "16": 0,
+      "34": 1200
+    },
+    "hitl_conditions": ["FILING_STATUS_AMBIGUITY"]
+  }
+}
