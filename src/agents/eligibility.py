@@ -51,7 +51,7 @@ def load_policy() -> dict[str, str]:
 
 def ungrounded(findings: list[dict], policy: dict[str, str]) -> list[str]:
     """Rule IDs cited by findings that are not in the policy (should always be empty)."""
-    return sorted({f["rule"] for f in findings if f["rule"] not in policy or f["citation"] != citation(f["rule"])})
+    return sorted({f["rule_id"] for f in findings if f["rule_id"] not in policy or f["citation"] != citation(f["rule_id"])})
 
 
 def run(state: dict) -> dict:
@@ -101,8 +101,8 @@ def facts_for_model(answers: dict, decision: Decision) -> dict:
     rules = decision.rules
     return {"filing_status": rules["filing_status"], "boxes": rules["boxes"],
             "spouse_died_in_2025": answers.get("spouse_died_in_2025"),
-            "taxpayer_born_before_1961_01_02": (rules["boxes"] or {}).get("taxpayer_65_or_older"),
-            "spouse_born_before_1961_01_02": (rules["boxes"] or {}).get("spouse_65_or_older")}
+            "taxpayer_born_before_1961_01_02": (rules["boxes"] or {}).get("tp_65"),
+            "spouse_born_before_1961_01_02": (rules["boxes"] or {}).get("sp_65")}
 
 
 def crosscheck(answers: dict, decision: Decision, policy: dict[str, str]) -> dict | None:

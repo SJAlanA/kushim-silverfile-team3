@@ -57,8 +57,9 @@ def citation(rule_id: str) -> str:
     return f"policy.md#{rule_id.lower()}"
 
 
-def finding(rule_id: str, text: str, **extra: Any) -> dict:
-    return {"rule": rule_id, "citation": citation(rule_id), "text": text, **extra}
+def finding(rule_id: str, detail: str, passed: bool = True, **extra: Any) -> dict:
+    """One cited finding (contract section 8). `passed` is False when the rule found a problem or could not run."""
+    return {"rule_id": rule_id, "citation": citation(rule_id), "passed": passed, "detail": detail, **extra}
 
 
 def parse_date(value: Any) -> date | None:
@@ -85,7 +86,7 @@ def check_filing_status(answers: dict, findings: list[dict], escalations: list[E
     """The validated filing status, or None if it is missing or invalid (and why, in findings)."""
     status = answers.get("filing_status")
     if status is None:
-        findings.append(finding("R-FS-01", "No filing status has been given yet, so none is set."))
+        findings.append(finding("R-FS-01", "No filing status has been given yet, so none is set.", passed=False))
         return None
     if status not in FILING_STATUSES:
         escalations.append(Escalation(
@@ -124,12 +125,12 @@ def check_eligibility(answers: dict, status: str | None, findings: list[dict],
         return True
     unknown = taxpayer is None or (status == "mfj" and spouse is None)
     if unknown:
-        findings.append(finding("R-ELIG-01", "A date of birth is missing, so 1040-SR eligibility is not decided."))
+        findings.append(finding("R-ELIG-01", "A date of birth is missing, so 1040-SR eligibility is not decided.", passed=False))
         return None
     escalations.append(Escalation(
         "OUT_OF_SCOPE", "Nobody on this return was born before 2 January 1961, so Form 1040-SR can't be used. "
         "SilverFile only drafts the 1040-SR.", "R-ELIG-01", "taxpayer_dob", "question_id"))
-    findings.append(finding("R-ELIG-01", "Nobody on the return was born before 2 January 1961."))
+    findings.append(finding("R-ELIG-01", "Nobody on the return was born before 2 January 1961.", passed=False))
     return False
 
 
@@ -142,10 +143,10 @@ def count_boxes(answers: dict, status: str | None, findings: list[dict]) -> tupl
     spouse_blind = answers.get("spouse_blind") if spouse_on_return else False
     if status is None or None in (taxpayer_65, spouse_65, taxpayer_blind, spouse_blind):
         findings.append(finding("R-SD-02", "A birth date or eyesight answer is missing, so the line 12d boxes "
-                                           "are not counted."))
+                                           "are not counted.", passed=False))
         return None, None
-    boxes = {"taxpayer_65_or_older": taxpayer_65, "taxpayer_blind": bool(taxpayer_blind),
-             "spouse_65_or_older": spouse_65, "spouse_blind": bool(spouse_blind)}
+    boxes = {"tp_65": taxpayer_65, "tp_blind": bool(taxpayer_blind),
+             "sp_65": spouse_65, "sp_blind": bool(spouse_blind)}
     count = sum(1 for checked in boxes.values() if checked)
     findings.append(finding("R-SD-02", f"{count} of the 4 boxes on line 12d are checked.", boxes=boxes))
     if status == "mfs" and spouse_on_return and (spouse_65 or spouse_blind):
@@ -165,7 +166,7 @@ def count_senior_qualifiers(answers: dict, status: str | None, findings: list[di
     if status == "mfj":
         people.append(is_senior(parse_date(answers.get("spouse_dob"))))
     if None in people:
-        findings.append(finding("R-SR-01", "A birth date is missing, so senior qualifiers are not counted."))
+        findings.append(finding("R-SR-01", "A birth date is missing, so senior qualifiers are not counted.", passed=False))
         return None
     qualifiers = sum(1 for person in people if person)
     findings.append(finding("R-SR-01", f"{qualifiers} person(s) on the return are 65 or older and qualify."))
@@ -187,7 +188,7 @@ def check_chart_conditions(answers: dict, status: str | None, findings: list[dic
             escalations.append(Escalation(
                 "OUT_OF_SCOPE", f"{what}, so the Standard Deduction Chart doesn't apply and SilverFile can't "
                 "work out the deduction.", "R-SD-04", question_id, "question_id"))
-            findings.append(finding("R-SD-04", f"{what}; the chart does not apply."))
+            findings.append(finding("R-SD-04", f"{what}; the chart does not apply.", passed=False))
 
 
 def check_other_income(answers: dict, findings: list[dict], escalations: list[Escalation]) -> None:
@@ -201,12 +202,12 @@ def check_other_income(answers: dict, findings: list[dict], escalations: list[Es
         escalations.append(Escalation(
             "OUT_OF_SCOPE", f"The taxpayer reported other income that SilverFile doesn't handle ({', '.join(items)}).",
             rules[0], "other_income", "question_id", {"items": items, "rules": rules}))
-        findings.extend(finding(rule, f"Other income: {item} is out of scope.") for item, rule in zip(items, rules))
+        findings.extend(finding(rule, f"Other income: {item} is out of scope.", passed=False) for item, rule in zip(items, rules))
     else:
         escalations.append(Escalation(
             "UNCERTAIN", "The taxpayer said there was other income, but SilverFile can't tell what kind or whether "
             "it belongs on the return. A volunteer needs to decide.", "R-SCOPE-12", "other_income", "question_id"))
-        findings.append(finding("R-SCOPE-12", "Other income was reported that could not be classified."))
+        findings.append(finding("R-SCOPE-12", "Other income was reported that could not be classified.", passed=False))
 
 
 # ---------------------------------------------------------------------------
@@ -241,14 +242,14 @@ def check_documents(documents: list[dict], extracted: dict, findings: list[dict]
             escalations.append(Escalation(
                 "OUT_OF_SCOPE", f"Document {doc_id} is a {doc_type or 'form of unknown type'}, which SilverFile "
                 "doesn't handle.", rule, doc_id, "doc_id", {"doc_type": doc_type}))
-            findings.append(finding(rule, f"{doc_id} ({doc_type or 'unknown'}) is out of scope."))
+            findings.append(finding(rule, f"{doc_id} ({doc_type or 'unknown'}) is out of scope.", passed=False))
             continue
         if doc_type == "1099-R" and readable and record["fields"].get("box2b_taxable_not_determined"):
             escalations.append(Escalation(
                 "R1099_TAXABLE_NOT_DETERMINED", f"1099-R {doc_id} has box 2b 'taxable amount not determined' "
                 "checked. Working out the taxable part needs the Simplified Method or General Rule, which "
                 "SilverFile doesn't do, so a person must take this case.", "R-1099R-01", doc_id, "doc_id"))
-            findings.append(finding("R-1099R-01", f"{doc_id} has box 2b checked; the taxable amount is not known."))
+            findings.append(finding("R-1099R-01", f"{doc_id} has box 2b checked; the taxable amount is not known.", passed=False))
         family = _family(doc_type, record if readable else None)
         if family:
             doc_line_map[doc_id] = family
@@ -296,7 +297,7 @@ def check_conflicts(answers: dict, status: str | None, extracted: dict, findings
             f"{'differs' if len(mismatches) == 1 else 'differ'}. SilverFile can't tell which is right, so a volunteer needs to check.", "R-DOC-01", doc_id,
             "doc_id", {"issue": "mismatch", "fields": mismatches}))
         findings.append(finding("R-DOC-01", f"W-2 {doc_id} conflicts with the taxpayer's answers "
-                                            f"({', '.join(mismatches)})."))
+                                            f"({', '.join(mismatches)}).", passed=False))
 
 
 def _person_matches(fields: dict, first: Any, last: Any, ssn: Any) -> list[str] | None:
@@ -344,6 +345,7 @@ def decide(answers: dict, documents: list[dict], extracted: dict) -> Decision:
         "box_count": box_count,
         "boxes": boxes,
         "senior_qualifiers": qualifiers,
+        "standard_deduction_chart_applies": not any(e.rule == "R-SD-04" for e in escalations),
         "schedules": applicable_schedules(answers, qualifiers),
         "doc_line_map": doc_line_map,
         "findings": findings,

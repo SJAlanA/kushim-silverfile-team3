@@ -87,8 +87,7 @@ def test_box_count_and_qualifiers_for_every_combination(status, tp_senior, tp_bl
 
 def test_boxes_are_named_so_a_volunteer_can_read_them():
     rules = decide(joint(taxpayer_blind=True), [], {}).rules
-    assert rules["boxes"] == {"taxpayer_65_or_older": True, "taxpayer_blind": True,
-                              "spouse_65_or_older": True, "spouse_blind": False}
+    assert rules["boxes"] == {"tp_65": True, "tp_blind": True, "sp_65": True, "sp_blind": False}
     assert rules["box_count"] == 3 and rules["senior_qualifiers"] == 2
 
 
@@ -101,7 +100,7 @@ def test_separate_filer_spouse_boxes_are_counted_with_a_note_for_the_volunteer()
     rules = decide(answers(filing_status="mfs", spouse_dob=SENIOR, spouse_blind=False,
                            spouse_itemizes_separately=False, spouse_died_in_2025=False), [], {}).rules
     assert rules["box_count"] == 2 and rules["senior_qualifiers"] == 0
-    assert any("confirm the spouse" in f["text"] for f in rules["findings"])
+    assert any("confirm the spouse" in f["detail"] for f in rules["findings"])
 
 
 # ---------------------------------------------------------------------------
@@ -282,7 +281,24 @@ def test_every_finding_cites_a_real_rule_with_a_matching_anchor():
         assert decision.rules["findings"]
         assert eligibility.ungrounded(decision.rules["findings"], policy) == []
         for finding in decision.rules["findings"]:
-            assert finding["citation"] == f"policy.md#{finding['rule'].lower()}"
+            assert finding["citation"] == f"policy.md#{finding['rule_id'].lower()}"
+
+
+def test_rules_have_exactly_the_keys_of_contract_section_8():
+    rules = decide(answers(), [], {}).rules
+    contract = {"eligible_1040sr", "filing_status", "box_count", "boxes", "senior_qualifiers",
+                "standard_deduction_chart_applies", "schedules", "in_scope", "doc_line_map", "findings"}
+    assert contract <= set(rules)
+    assert set(rules["boxes"]) == {"tp_65", "tp_blind", "sp_65", "sp_blind"}
+    assert all({"rule_id", "citation", "passed", "detail"} <= set(f) for f in rules["findings"])
+
+
+def test_findings_say_when_a_rule_found_a_problem():
+    clean = decide(answers(), [], {}).rules
+    assert clean["standard_deduction_chart_applies"] is True and all(f["passed"] for f in clean["findings"])
+    problem = decide(answers(can_be_claimed_as_dependent=True), [], {}).rules
+    assert problem["standard_deduction_chart_applies"] is False
+    assert [f["rule_id"] for f in problem["findings"] if not f["passed"]] == ["R-SD-04"]
 
 
 def test_every_rule_id_used_in_the_code_exists_in_the_policy():
