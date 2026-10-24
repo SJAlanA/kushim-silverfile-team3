@@ -14,13 +14,13 @@ Eligibility is a pure decision table (`eligibility_rules.decide`). Every finding
 - **Box 2b:** checked on any 1099-R, even when everything else is fine.
 - **Advice:** pattern lists in `guardrails.py`, run on every reply by Intake.
 - **Filing status:** spouse died in 2025; qualifying surviving spouse or head of household with no dependent listed.
-- **Document conflict:** the W-2 name and SSN last four against the taxpayer (either spouse on a joint return). Reasons never contain digits.
+- **Document conflict:** the W-2 name and SSN last four against the taxpayer (either spouse on a joint return).
 - **Exploitation:** see below.
 - **Unclassifiable:** other income that matches nothing raises UNCERTAIN, never assumed in scope.
 
 ## Notice and stop
 
-For exploitation we chose to notice and stop, never to judge. SilverFile can't know whether a nephew helping with a form is kind or coercive, and an accusation from a tax tool would be wrong, hurtful and unprovable. So the patterns lean toward catching too much, the event reason is neutral, and the reply to the taxpayer is warm and says only that a volunteer will help. A missed signal can cost someone a refund; a false alarm costs a volunteer a short look.
+For exploitation we chose to notice and stop, never to judge. SilverFile can't know whether a nephew helping with a form is kind or coercive, and an accusation from a tax tool would be wrong, hurtful and unprovable. So the patterns lean toward catching too much, and both the event reason and the reply to the taxpayer stay neutral and kind. A missed signal can cost someone a refund; a false alarm costs a volunteer a short look.
 
 ## Not raising an event twice
 
@@ -31,6 +31,5 @@ The orchestrator reruns Eligibility whenever an answer or document changes. Befo
 - "Should I …" counts as advice unless it's clearly about answering (type, enter, upload). A harmless "should I use my maiden name?" will escalate.
 - Third-party and pressure patterns are phrase based. Indirect wording ("Dave said it would be easier if he took care of it") is missed.
 - "Foreign" and "stocks" only count in the other-income answer, so a mention elsewhere is missed. A pension "from Canada" becomes UNCERTAIN, not OUT_OF_SCOPE, which still reaches a person.
-- A W-2 for a spouse on a separate return is treated as a conflict.
 - "No wages" versus an existing W-2 isn't detected, because Intake has no such question; only name and SSN mismatches are.
 - Death date isn't collected, so a spouse who turned 65 during 2025 is counted by the end-of-year rule.
