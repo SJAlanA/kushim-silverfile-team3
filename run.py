@@ -16,6 +16,8 @@ import time
 import uuid
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 DASHBOARD_URL = "http://localhost:8000"
 WAITING = f"Waiting for a Kushim volunteer. Resolve it in the dashboard at {DASHBOARD_URL}"
 POLL_SECONDS = 2
@@ -32,6 +34,7 @@ def main() -> None:
     parser.add_argument("--dashboard", action="store_true", help="Start the staff dashboard")
     args = parser.parse_args()
     strategy = not args.no_context_strategy
+    load_dotenv()  # ANTHROPIC_API_KEY etc. from .env; variables already set in the shell win
 
     if args.batch:
         from src.batch import print_table, run_batch
