@@ -1,3 +1,107 @@
 {
-  "cases": []
+  "description": "One regression case per HITL condition. Each case starts from `base` (a case file), replaces the named `answers`, appends `add_documents`, and says which HITL conditions must be raised, in order, and how the run must end. Run by tests/test_evals.py.",
+  "cases": [
+    {
+      "id": "advice_request",
+      "description": "The taxpayer asks whether to convert an IRA instead of answering. Intake notes the question and raises TAX_ADVICE; the volunteer stops the run.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"taxpayer_blind": "Should I convert my IRA to a Roth?"},
+      "hitl_resolutions": [{"condition": "TAX_ADVICE", "decision": "stop", "note": "Advice question noted for the preparer."}],
+      "expected": {"hitl_conditions": ["TAX_ADVICE"], "status": "escalated"}
+    },
+    {
+      "id": "someone_else_answering",
+      "description": "A nephew is answering and has no stated authority. Intake raises EXPLOITATION.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"who_is_answering": {"is_taxpayer": false, "relationship": "nephew", "has_authority": false}},
+      "hitl_resolutions": [{"condition": "EXPLOITATION", "decision": "stop", "note": "Follow up with the taxpayer directly."}],
+      "expected": {"hitl_conditions": ["EXPLOITATION"], "status": "escalated"}
+    },
+    {
+      "id": "refund_account_not_described",
+      "description": "The taxpayer cannot say whose account the refund goes to. Intake raises EXPLOITATION.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"refund_destination": "I don't know whose account it is, my nephew set it up"},
+      "hitl_resolutions": [{"condition": "EXPLOITATION", "decision": "stop", "note": "Call the taxpayer before going further."}],
+      "expected": {"hitl_conditions": ["EXPLOITATION"], "status": "escalated"}
+    },
+    {
+      "id": "spouse_died_in_2025",
+      "description": "Eval case 2 in miniature: a widowed filer. FILING_STATUS_AMBIGUITY is raised once and the volunteer's choice finishes the run.",
+      "base": "demo/eval_case_2/case.json",
+      "expected": {"hitl_conditions": ["FILING_STATUS_AMBIGUITY"], "status": "complete"}
+    },
+    {
+      "id": "head_of_household_without_dependent",
+      "description": "Head of household with no dependent listed. Eligibility raises FILING_STATUS_AMBIGUITY; the volunteer confirms and the run finishes.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"filing_status": "hoh"},
+      "hitl_resolutions": [{"condition": "FILING_STATUS_AMBIGUITY", "decision": "continue", "note": "Confirmed with the taxpayer (policy.md#r-fs-05)."}],
+      "expected": {"hitl_conditions": ["FILING_STATUS_AMBIGUITY"], "status": "complete"}
+    },
+    {
+      "id": "taxable_amount_not_determined",
+      "description": "A 1099-R has box 2b checked. R1099_TAXABLE_NOT_DETERMINED is raised even though everything else is present.",
+      "base": "demo/eval_case_1/case.json",
+      "add_documents": [{"doc_id": "r_1", "doc_type": "1099-R", "path": "data/fixtures/1099r_2b_checked.json"}],
+      "hitl_resolutions": [{"condition": "R1099_TAXABLE_NOT_DETERMINED", "decision": "stop", "note": "Needs the Simplified Method."}],
+      "expected": {"hitl_conditions": ["R1099_TAXABLE_NOT_DETERMINED"], "status": "escalated"}
+    },
+    {
+      "id": "self_employment_document",
+      "description": "A 1099-NEC is supplied. Eligibility raises OUT_OF_SCOPE for that document.",
+      "base": "demo/eval_case_1/case.json",
+      "add_documents": [{"doc_id": "nec_1", "doc_type": "1099-NEC", "path": "data/fixtures/1099nec_1.json"}],
+      "hitl_resolutions": [{"condition": "OUT_OF_SCOPE", "decision": "stop", "note": "Refer to a client call."}],
+      "expected": {"hitl_conditions": ["OUT_OF_SCOPE"], "status": "escalated"}
+    },
+    {
+      "id": "rental_income",
+      "description": "The taxpayer reports rental income in the other-income answer. Intake only records it; Eligibility raises OUT_OF_SCOPE.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"other_income": {"has_other_income": true, "description": "I rent out a room in my house"}},
+      "hitl_resolutions": [{"condition": "OUT_OF_SCOPE", "decision": "stop", "note": "Rental income needs Schedule E."}],
+      "expected": {"hitl_conditions": ["OUT_OF_SCOPE"], "status": "escalated"}
+    },
+    {
+      "id": "other_income_unclassified",
+      "description": "Other income that matches no scope rule. Eligibility raises UNCERTAIN rather than guessing.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"other_income": {"has_other_income": true, "description": "a small prize from a raffle"}},
+      "hitl_resolutions": [{"condition": "UNCERTAIN", "decision": "stop", "note": "Decide where a prize belongs."}],
+      "expected": {"hitl_conditions": ["UNCERTAIN"], "status": "escalated"}
+    },
+    {
+      "id": "claimed_as_dependent",
+      "description": "The taxpayer can be claimed as a dependent, so the Standard Deduction Chart does not apply.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"can_be_claimed_as_dependent": true},
+      "hitl_resolutions": [{"condition": "OUT_OF_SCOPE", "decision": "stop", "note": "Chart does not apply (policy.md#r-sd-04)."}],
+      "expected": {"hitl_conditions": ["OUT_OF_SCOPE"], "status": "escalated"}
+    },
+    {
+      "id": "dual_status_alien",
+      "description": "A dual-status alien. The chart does not apply.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"dual_status_alien": true},
+      "hitl_resolutions": [{"condition": "OUT_OF_SCOPE", "decision": "stop", "note": "Chart does not apply (policy.md#r-sd-04)."}],
+      "expected": {"hitl_conditions": ["OUT_OF_SCOPE"], "status": "escalated"}
+    },
+    {
+      "id": "not_old_enough_for_1040sr",
+      "description": "Born in 1970: nobody on the return qualifies for the 1040-SR.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"taxpayer_dob": "1970-02-11"},
+      "hitl_resolutions": [{"condition": "OUT_OF_SCOPE", "decision": "stop", "note": "Needs a regular Form 1040 (policy.md#r-elig-01)."}],
+      "expected": {"hitl_conditions": ["OUT_OF_SCOPE"], "status": "escalated"}
+    },
+    {
+      "id": "w2_belongs_to_someone_else",
+      "description": "The taxpayer's name differs from the name on the W-2. Eligibility raises DOC_CONFLICT; the volunteer checks and continues.",
+      "base": "demo/eval_case_1/case.json",
+      "answers": {"taxpayer_first_name": "Pat", "taxpayer_last_name": "Jones"},
+      "hitl_resolutions": [{"condition": "DOC_CONFLICT", "decision": "continue", "note": "Checked the W-2 with the taxpayer."}],
+      "expected": {"hitl_conditions": ["DOC_CONFLICT"], "status": "complete"}
+    }
+  ]
 }
