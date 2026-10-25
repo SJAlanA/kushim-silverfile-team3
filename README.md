@@ -113,6 +113,8 @@ docker compose run --rm app python run.py --case demo/eval_case_2/case.json
 docker compose run --rm app python run.py --interactive
 ```
 
+**After pulling new code, rebuild the image** with `docker compose build` (or `docker compose up --build`). `docker compose run` reuses an existing image, so without a rebuild it runs the old code.
+
 The image runs offline by default and includes Tesseract. Both services share one checkpoint database volume, so a run paused on a HITL event can be resolved in the dashboard container. Forms are written to `./outputs` and traces to `./traces` on your machine. To use Claude in Docker, put the key in `.env` and run with `SILVERFILE_OFFLINE=0 docker compose up`. Makefile shortcuts: `make docker-build`, `make docker-up`, `make docker-demo1`, `make docker-test`.
 
 ## Context-window measurement
