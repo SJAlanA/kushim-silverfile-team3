@@ -9,6 +9,12 @@ def _open_conditions(state: dict) -> list[str]:
     return [event["condition"] for event in state.get("hitl", []) if event["status"] == "open"]
 
 
+def _stored_text(state: dict) -> str:
+    """Everything kept in state, with messages as their text: message ids are random hex and could
+    contain any four digits, which would make a check for a leaked number fail by chance."""
+    return json.dumps({**state, "messages": [message.content for message in state["messages"]]}, default=str)
+
+
 def _assistant_text(state: dict) -> str:
     return " ".join(message.content for message in state["messages"] if message.type == "ai")
 
@@ -235,7 +241,7 @@ def test_volunteered_ssn_is_dropped_and_the_rest_of_the_answer_still_counts():
         _apply(state, intake.answer(state, reply), [])
     assert state["intake"]["taxpayer_last_name"]["value"] == "Example"
     assert intake.VOLUNTEERED_SSN_NOTICE in _assistant_text(state)
-    assert "6789" not in json.dumps(state, default=str)
+    assert "6789" not in _stored_text(state)
 
 
 def test_a_bare_volunteered_number_is_re_asked_without_counting_as_a_failed_try():
@@ -248,4 +254,4 @@ def test_a_bare_volunteered_number_is_re_asked_without_counting_as_a_failed_try(
         _apply(state, intake.answer(state, reply), [])
     assert state["intake"]["taxpayer_last_name"]["value"] == "Example"
     assert not _open_conditions(state)
-    assert "6789" not in json.dumps(state, default=str)
+    assert "6789" not in _stored_text(state)

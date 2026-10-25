@@ -67,7 +67,9 @@ def test_rejected_values_never_reach_state_or_traces(rejected, fragments, tmp_pa
             _apply(state, intake.ask(state), [])
             _apply(state, intake.answer(state, reply), [])
     assert state["intake"]["taxpayer_ssn"]["value"] == "901-11-1037"
-    stored = json.dumps(state, default=str) + "".join(p.read_text() for p in tmp_path.glob("*"))
+    # Message objects carry random ids (uuid hex can contain "6789"), so compare what was said, not the ids.
+    said = {**state, "messages": [message.content for message in state["messages"]]}
+    stored = json.dumps(said, default=str) + "".join(p.read_text() for p in tmp_path.glob("*"))
     for fragment in fragments:
         assert fragment not in stored
 
