@@ -16,6 +16,8 @@ import time
 import uuid
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 DASHBOARD_URL = "http://localhost:8000"
 WAITING = f"Waiting for a Kushim volunteer. Resolve it in the dashboard at {DASHBOARD_URL}"
 POLL_SECONDS = 2
@@ -32,6 +34,7 @@ def main() -> None:
     parser.add_argument("--dashboard", action="store_true", help="Start the staff dashboard")
     args = parser.parse_args()
     strategy = not args.no_context_strategy
+    load_dotenv()  # ANTHROPIC_API_KEY etc. from .env; variables already set in the shell win
 
     if args.batch:
         from src.batch import print_table, run_batch
@@ -143,16 +146,21 @@ def run_interactive(session_id: str | None, strategy: bool) -> None:
     print(f"(Session {session_id}. You can stop any time and resume with --session {session_id}.)")
 
     waiting = False
-    while (payload := _pending(graph, config)) is not None:
-        if payload["type"] == "intake_question":
-            waiting = False
-            reply = input(f"\n{payload['text']}\n> ")
-            graph.invoke(Command(resume=reply), config)
-        else:
-            if not waiting:
-                print(f"\n{WAITING}")
-                waiting = True
-            time.sleep(POLL_SECONDS)
+    try:
+        while (payload := _pending(graph, config)) is not None:
+            if payload["type"] == "intake_question":
+                waiting = False
+                reply = input(f"\n{payload['text']}\n> ")
+                graph.invoke(Command(resume=reply), config)
+            else:
+                if not waiting:
+                    print(f"\n{WAITING}")
+                    waiting = True
+                time.sleep(POLL_SECONDS)
+    except (EOFError, KeyboardInterrupt):  # Ctrl-D or Ctrl-C: every answer so far is already saved
+        print(f"\n\nStopped. Everything you've answered is saved. To carry on later, run:\n"
+              f"  python run.py --session {session_id}")
+        return
     _print_result(graph.get_state(config).values)
 
 

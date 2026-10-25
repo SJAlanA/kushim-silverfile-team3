@@ -26,7 +26,7 @@ def is_offline() -> bool:
 
 
 def get_llm():
-    """Return a ChatAnthropic model (MODEL_NAME env, temperature 0), or None in offline mode."""
+    """Return a ChatAnthropic model (MODEL_NAME env, default sampling), or None in offline mode."""
     if is_offline():
         return None
     return _client(os.getenv("MODEL_NAME") or DEFAULT_MODEL)
@@ -36,7 +36,9 @@ def get_llm():
 def _client(model: str):
     from langchain_anthropic import ChatAnthropic
 
-    return ChatAnthropic(model=model, temperature=0, max_tokens=1024, timeout=60, max_retries=2)
+    # No temperature: current Claude models reject non-default values, and every caller already
+    # validates the reply (strict JSON for vision, guardrails for Intake, the rules table for Eligibility).
+    return ChatAnthropic(model=model, max_tokens=1024, timeout=60, max_retries=2)
 
 
 def invoke_with_usage(messages: list[BaseMessage]) -> tuple[str, int]:
