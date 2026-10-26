@@ -69,6 +69,34 @@ Expect exactly one `FILING_STATUS_AMBIGUITY` event. The case file resolves it as
 pytest tests/test_evals.py
 ```
 
+## Documents and W-2 extraction
+
+The Document Extraction agent reads each document a taxpayer gives, all in parallel (one `extract_one` branch per document). It records what the paper says and nothing more: it never assigns 1040-SR lines or decides what is taxable.
+
+| Type | Fields read |
+| --- | --- |
+| `W2` | employee and employer name, SSN last 4, box 1 wages, box 2 federal tax withheld |
+| `1099-INT` | boxes 1, 4 and 8 |
+| `1099-DIV` | boxes 1a, 1b and 4 |
+| `1099-R` | boxes 1, 2a, 2b (checked or not), 4 and 7, IRA/SEP/SIMPLE, QCD amount |
+| `SSA-1099` | boxes 5 and 6 |
+
+A W-2 image is read by the first method that works:
+1. **vision**: Claude reads the photo (needs `ANTHROPIC_API_KEY`);
+2. **ocr**: offline, with `rapidocr` (or Tesseract if installed), taking the value under each box label;
+3. **json**: the transcription file next to the image (`demo/w2_image_1.json`). The record says `"extractor": "json"` with a warning, so Review knows the picture itself wasn't read.
+
+Every record names its extractor and a confidence. If a document is missing or failed, the agent tries it once more, then asks a volunteer. A volunteer is also asked when confidence is below 0.6, two readings disagree, or the document contains text that looks like instructions. Only the last four digits of an SSN are kept, and only 900-series test SSNs are accepted.
+
+Read one document on its own:
+
+```bash
+SILVERFILE_OFFLINE=1 python -m src.agents.extraction demo/w2_image_1.jpg          # W-2 by OCR
+python -m src.agents.extraction data/fixtures/1099int_1.json 1099-INT             # any type by name
+```
+
+The first prints `"extractor": "ocr"`, `box1_wages` 30000 and `box2_fed_withheld` 2000. `python data/generate_fixtures.py` redraws the W-2 images and rewrites the fixtures, byte for byte the same each time. Design notes: [docs/notes/inter_agent_communication.md](docs/notes/inter_agent_communication.md).
+
 ## Answer the questions yourself
 
 ```bash
