@@ -251,8 +251,18 @@ def review_summary(values: dict) -> dict | None:
         text = f"Found problems {when}."
     sent_back = [m for m in values.get("handoffs", []) if m["from_agent"] == "review" and m["kind"] == "send_back"]
     return {"passed": bool(review.get("passed")), "text": text,
-            "issues": [i if isinstance(i, str) else str(i) for i in review.get("issues") or []],
+            "issues": [issue_text(i) for i in review.get("issues") or []],
             "sent_back": [{"to": m["to_agent"], "reason": m["reason"]} for m in sent_back]}
+
+
+def issue_text(issue) -> str:
+    """One review issue in words: 'Line 9: recomputed total. Expected 36,940, found 36,000.'
+    Review writes dicts; anything else is shown as it is."""
+    if not isinstance(issue, dict):
+        return str(issue)
+    check = str(issue.get("check") or "check").replace("_", " ")
+    where = f"Line {issue['line']}: {check}" if issue.get("line") else check.capitalize()
+    return f"{where}. Expected {field_value(issue.get('expected'))}, found {field_value(issue.get('found'))}."
 
 
 def field_value(value) -> str:

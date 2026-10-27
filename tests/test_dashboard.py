@@ -151,6 +151,16 @@ def test_documents_read_in_plain_words():
     assert rows[0]["file"] == "w2_image_1.jpg"
 
 
+@pytest.mark.parametrize("source_path, status", [("demo/w2_image_1.jpg", 200), ("../../../../etc/hosts", 404),
+                                                 ("/etc/hosts", 404), ("", 404)])
+def test_a_document_link_serves_only_the_recorded_file_inside_the_repository(client, paused_session, source_path, status):
+    _, graph = paused_session
+    record = {"doc_id": "w2_1", "doc_type": "W2", "fields": {}, "extractor": "ocr", "confidence": 1.0,
+              "source_path": source_path}
+    graph.update_state(config("dash-1"), {"extracted": {"w2_1": record}})
+    assert client.get("/returns/dash-1/documents/w2_1").status_code == status
+
+
 def test_a_correction_picked_in_the_form_is_read_like_the_taxpayers_answer(client, paused_session):
     _, graph = paused_session
     event_id = graph.get_state(config("dash-1")).values["hitl"][0]["event_id"]
@@ -199,6 +209,14 @@ def test_review_says_what_it_checked_without_tool_jargon():
          "reason": "Every check passed (26 independent tax_math recomputations)."}]})
     assert summary["text"].startswith("Passed on the first check.") and "tax_math" not in summary["text"]
     assert summary["sent_back"] == []
+
+
+def test_a_failed_review_lists_its_issues_in_words_not_raw_data():
+    from src.dashboard.views import review_summary
+
+    issue = {"line": "9", "check": "recomputed_total", "expected": 36940, "found": 36000, "send_to": "computation"}
+    summary = review_summary({"review": {"passed": False, "issues": [issue, "a plain note"], "iteration": 1}})
+    assert summary["issues"] == ["Line 9: recomputed total. Expected 36,940, found 36,000.", "a plain note"]
 
 
 def test_policy_citations_become_named_links():
