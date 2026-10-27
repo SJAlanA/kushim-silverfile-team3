@@ -1,0 +1,14 @@
+{# One line's calculation, step by step. Expects `row` from views.line_row. #}
+{% for step in row.steps %}
+  {% if step.kind == "sum" %}
+  <table class="tape">
+    {% for amount, what in step.terms %}
+    <tr><td class="op">{{ "+" if not loop.first else (step.number ~ "." if step.number else "") }}</td><td class="num">{{ amount }}</td><td>{{ what }}</td></tr>
+    {% endfor %}
+    {% if step.terms|length > 1 %}<tr class="total"><td class="op">=</td><td class="num">{{ step.result }}</td><td></td></tr>{% endif %}
+  </table>
+  {% else %}
+  <div class="step"><span class="op">{{ step.number ~ "." if step.number }}</span><span>{{ step.text }}</span>{% if step.result %}<span class="num">= {{ step.result }}</span>{% endif %}</div>
+  {% endif %}
+{% endfor %}
+{% if row.method %}<p class="method">Method: {{ row.method }}</p>{% endif %}
