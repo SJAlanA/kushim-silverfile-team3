@@ -1,4 +1,5 @@
 # docker compose up                     -> staff dashboard on http://localhost:8000
+#                                          and taxpayer page on http://localhost:8001
 # docker compose run --rm app python run.py --case demo/eval_case_1/case.json
 # docker compose run --rm app python run.py --interactive
 #
@@ -15,6 +16,8 @@ x-silverfile: &silverfile
   environment:                         # these win over .env, which holds host-side values
     SILVERFILE_OFFLINE: ${SILVERFILE_OFFLINE:-1}
     DASHBOARD_HOST: 0.0.0.0
+    TAXPAYER_HOST: 0.0.0.0
+    UPLOAD_DIR: /app/state/uploads     # taxpayers' W-2 photos stay in the private state volume
     CHECKPOINT_DB: /app/state/silverfile_checkpoints.sqlite
     SILVERFILE_TRACE_DIR: /app/traces
     TAX_MATH_INPROCESS: "0"
@@ -31,6 +34,17 @@ services:
       - "8000:8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/')"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  taxpayer:
+    <<: *silverfile
+    command: ["python", "run.py", "--taxpayer"]
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/')"]
       interval: 15s
       timeout: 5s
       retries: 3

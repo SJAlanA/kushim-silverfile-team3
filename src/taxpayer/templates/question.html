@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Your answers{% endblock %}
+{% block content %}
+<label class="progress-label" for="progress">About {{ progress }}% done</label>
+<progress id="progress" value="{{ progress }}" max="100">{{ progress }}%</progress>
+
+<details class="save-link">
+  <summary>Save your private link to come back later</summary>
+  <p>Everything you answer is saved as you go. To carry on later, keep this link somewhere safe.
+     Anyone with it can see your answers, so don't share it.</p>
+  <p class="link">{{ url_for('tax_return', session_id=session_id, _external=True) }}</p>
+</details>
+
+{% for line in said %}<p class="said">{{ line }}</p>{% endfor %}
+
+{% if q.note %}<p class="note" role="status">{{ q.note }}</p>{% endif %}
+
+<section class="card" aria-labelledby="question">
+  <h1 id="question" class="question">{{ q.text }}</h1>
+  {% if q.explain %}<p class="hint explain">{{ q.explain }}</p>{% endif %}
+
+  {% if q.widget == "upload" %}
+  <form method="post" action="{{ url_for('documents', session_id=session_id) }}" enctype="multipart/form-data" class="answer">
+    <input type="hidden" name="question_id" value="{{ q.question_id }}"><input type="hidden" name="sub" value="{{ q.sub }}">
+    <p class="hint">Take a clear photo of each form, flat and in good light, and choose which form it is. JPG or PNG, up to 10 MB in total.</p>
+    {% for n in range(3) %}
+    <fieldset class="upload-row">
+      <legend>Form {{ n + 1 }}{% if n %} <span class="hint">(if you have another)</span>{% endif %}</legend>
+      <label for="type-{{ n }}">Which form is this?</label>
+      <select id="type-{{ n }}" name="doc_type">
+        {% for code, label in doc_choices %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+      </select>
+      <label for="file-{{ n }}">Photo</label>
+      <input id="file-{{ n }}" type="file" name="file" accept="image/jpeg,image/png">
+    </fieldset>
+    {% endfor %}
+    <button type="submit" class="primary">Upload and continue</button>
+    <button type="submit" name="none" value="yes" class="secondary" formnovalidate>I don't have any tax forms</button>
+  </form>
+
+  {% else %}
+  <form method="post" action="{{ url_for('answer', session_id=session_id) }}" class="answer">
+    <input type="hidden" name="question_id" value="{{ q.question_id }}"><input type="hidden" name="sub" value="{{ q.sub }}">
+    {% if q.widget == "yes_no" %}
+      <div class="choices">
+        <button type="submit" name="reply" value="yes" class="primary">Yes</button>
+        <button type="submit" name="reply" value="no" class="primary">No</button>
+      </div>
+    {% elif q.widget == "filing_status" %}
+      <div class="choices stacked">
+        {% for choice in q.choices %}<button type="submit" name="reply" value="{{ choice|lower }}" class="primary">{{ choice }}</button>{% endfor %}
+      </div>
+    {% else %}
+      <label for="reply" class="sr-only">Your answer</label>
+      {% if q.widget == "date" %}
+        <input id="reply" name="reply" type="date" min="1900-01-01" max="2025-12-31" required>
+      {% elif q.widget == "ssn" %}
+        <input id="reply" name="reply" inputmode="numeric" autocomplete="off" placeholder="9XX-XX-XXXX" required>
+      {% elif q.widget == "amount" %}
+        <input id="reply" name="reply" inputmode="decimal" autocomplete="off" placeholder="Amount in dollars, or none" required>
+      {% else %}
+        <input id="reply" name="reply" autocomplete="off" required autofocus>
+      {% endif %}
+      <button type="submit" class="primary">Continue</button>
+    {% endif %}
+  </form>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('answer', session_id=session_id) }}" class="helpers">
+    <input type="hidden" name="question_id" value="{{ q.question_id }}"><input type="hidden" name="sub" value="{{ q.sub }}">
+    <button type="submit" name="reply" value="I'm not sure" class="link-button">I'm not sure</button>
+    {% if can_go_back %}<button type="submit" name="reply" value="go back" class="link-button">Go back to the last question</button>{% endif %}
+  </form>
+</section>
+{% endblock %}

@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ "Photos too large" if too_large else "Link not found" }}{% endblock %}
+{% block content %}
+{% if too_large %}
+  <h1>Those photos are too large</h1>
+  <p class="lead">Please go back and send photos under 10 MB in total.</p>
+{% else %}
+  <h1>We couldn't find that return</h1>
+  <p class="lead">Check that you copied the whole private link. If you've lost it, a Kushim volunteer can help.</p>
+  <p><a class="button secondary" href="{{ url_for('home') }}">Go to the start page</a></p>
+{% endif %}
+{% endblock %}

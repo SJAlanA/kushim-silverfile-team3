@@ -121,21 +121,35 @@ python run.py --dashboard                              # or: make dashboard
 
 Open http://localhost:8000. The dashboard and any runs must use the same checkpoint database: `CHECKPOINT_DB` in `.env`, by default `silverfile_checkpoints.sqlite` in the repository root.
 
-- **Sessions** groups every session into *Needs a human*, *In progress* and *Completed*, showing first name, status and open events.
-- **Waiting for review** lists every open HITL event with its plain-language reason. Click **Resolve** to choose a decision:
+- **Tax returns** groups every return into *Needs a volunteer*, *In progress* and *Draft ready*. An info icon beside each heading explains it.
+- **Needs a volunteer** lists every open HITL event with its plain-language reason. Click **Resolve** to choose a decision:
   - **Continue**, optionally with corrected answers such as `filing_status = mfj`;
   - **Stop**, which ends the session for a volunteer to prepare by hand;
   - **Send back** to a named agent.
 
   Then add a note and your name, and **Save decision**. A paused `--interactive` run carries on by itself.
 - **A session's page** shows the answers (SSNs masked), documents, every line with its working, the review result, volunteer decisions, and links to the HTML form, PDF and `audit.json`.
+- **Check and release.** Every finished draft waits for a volunteer, whether or not a HITL event was raised. Tick that you've checked it, add your name and click **Release to taxpayer**. The release is recorded in state and in `audit.json`, and only then can the taxpayer see the form.
 
 The dashboard has no login and listens only on this machine (`127.0.0.1`). See [SECURITY.md](SECURITY.md).
+
+## The taxpayer page
+
+```bash
+python run.py --taxpayer                               # or: make taxpayer
+```
+
+Open http://localhost:8001 and click **Start my return**. Run the staff dashboard too, on the same checkpoint database, so a volunteer can resolve events and release the draft.
+
+- **One question per screen**, in large type, with Yes/No buttons, a date picker and *I'm not sure* / *Go back* on every question. It's the same Intake agent as `--interactive`, so the same rules apply (only 900-series test SSNs, nothing echoed back).
+- **Upload your forms.** At the documents question the page asks for a photo (JPG or PNG, up to 10 MB) of each form. Photos are checked to be real images and saved under random names in `UPLOAD_DIR` (default `uploads/`, git-ignored). W-2 photos are read by vision or OCR; other forms as photos can't be read yet, so they go to a volunteer.
+- **A private link per return** (`/r/web-…`, 128 random bits). There's no login and no list of returns; anyone with the link can continue that return, so the page says to keep it safe.
+- **The form only after release.** When the questions end, the taxpayer sees "a volunteer is checking your draft". *View my form* and *Download PDF* appear only after a volunteer clicks **Release to taxpayer** in the dashboard. The taxpayer never sees the staff-facing reason for a HITL event, only that a volunteer is taking a look.
 
 ## Run with Docker
 
 ```bash
-docker compose up                                                         # dashboard on http://localhost:8000
+docker compose up                                                         # dashboard :8000, taxpayer page :8001
 docker compose run --rm app python run.py --case demo/eval_case_1/case.json
 docker compose run --rm app python run.py --case demo/eval_case_2/case.json
 docker compose run --rm app python run.py --interactive
@@ -169,10 +183,12 @@ kushim-silverfile-team3/
 │   ├── hitl.py              # HITL events
 │   ├── guardrails.py        # advice, exploitation and scope detection; outgoing check
 │   ├── security.py          # SSN gate, PII masking, injection scan
+│   ├── release.py           # a volunteer's sign-off that releases a draft to the taxpayer
 │   ├── agents/              # orchestrator, intake, extraction, eligibility, computation, review
 │   ├── tools/               # tax_math MCP server and client, tracing
 │   ├── form/                # HTML form, IRS PDF filling, audit.json
-│   └── dashboard/           # Flask staff dashboard
+│   ├── dashboard/           # Flask staff dashboard (port 8000)
+│   └── taxpayer/            # Flask taxpayer page (port 8001)
 ├── data/
 │   ├── policy.md            # reference corpus the Eligibility agent cites
 │   ├── forms/f1040sr.pdf    # official IRS 2025 Form 1040-SR (fillable)

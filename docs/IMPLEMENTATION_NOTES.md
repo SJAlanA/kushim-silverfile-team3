@@ -70,9 +70,16 @@ With no API key, or `SILVERFILE_OFFLINE=1`, every agent uses deterministic rules
 
 Every model reply is checked before use, and any failure falls back to the offline path with the fallback recorded.
 
+## Taxpayer page and release
+
+The taxpayer page (`src/taxpayer/`, port 8001) is a separate app from the staff dashboard, so the public side never shares routes with the staff side. It drives the same graph and checkpoint as the CLI: each answer is the same `Command(resume=...)` that `--interactive` sends. The documents question shows an upload form, and the uploaded photos are passed to Intake as the structured document list it already accepts.
+
+The taxpayer sees the form only after a volunteer releases it. This applies to every draft, not only those that raised a HITL event, because SilverFile's promise is that a person checks every return. The release is written to state as the finished graph's last step, so no agent runs again, and is added to `audit.json`.
+
 ## Known limits
 
 - The dashboard has no login and binds to `127.0.0.1` by default; it isn't production software (see [`SECURITY.md`](../SECURITY.md)).
 - Line 16 uses the 2025 rate schedule, as the brief requires, not the IRS Tax Table, so results can differ from the Table by a few dollars.
 - Exploitation and advice detection is phrase based: indirect wording can be missed, and some harmless phrasing escalates.
-- The dashboard resumes the graph inside the web request, so a slow model call holds the page.
+- The dashboard and the taxpayer page resume the graph inside the web request, so a slow model call or OCR holds the page.
+- On the taxpayer page only W-2 photos can be read; other forms uploaded as photos go to a volunteer.

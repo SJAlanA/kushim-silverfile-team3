@@ -165,7 +165,7 @@ input:not([type="radio"]), textarea {
 @media (max-width: 760px) { .tip { left: auto; right: -8px; transform: none; } }
 /* Same column widths in every group, so the three tables line up */
 .group table { table-layout: fixed; }
-.group .col-who { width: 20%; } .group .col-stage { width: 22%; } .group .col-when { width: 24%; } .group .col-action { width: 140px; }
+.group .col-who { width: 20%; } .group .col-stage { width: 22%; } .group .col-when { width: 24%; } .group .col-action { width: 190px; }
 @media (max-width: 760px) { .group table { table-layout: auto; } }
 /* On a phone each return becomes a small card instead of a sideways-scrolling table */
 @media (max-width: 760px) {
@@ -178,3 +178,13 @@ input:not([type="radio"]), textarea {
   .group td.spacer { display: none; }
   .group td.end { text-align: left; margin-top: var(--s2); }
 }
+
+/* Release to taxpayer */
+.pill-released { color: var(--done); background: var(--done-bg); }
+.callout-done { background: var(--done-bg); }
+.callout-done h2 { color: var(--done); }
+.release { display: grid; gap: var(--s2); max-width: 520px; padding-bottom: var(--s2); }
+.release label { font-weight: 600; }
+.release .choice { font-weight: 400; display: flex; gap: var(--s2); align-items: baseline; }
+.release button { justify-self: start; margin-top: var(--s2); }
+.release input[type="checkbox"] { width: auto; flex: none; transform: scale(1.3); }

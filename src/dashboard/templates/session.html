@@ -30,6 +30,27 @@
 </section>
 {% endif %}
 
+{% if s.release %}
+<section class="callout callout-done" aria-labelledby="h-release">
+  <h2 id="h-release">Released to the taxpayer</h2>
+  <p>Released by {{ s.release.released_by }} on {{ s.release.released_at|when }}.{% if s.release.note %} Note: “{{ s.release.note }}”{% endif %}
+     The taxpayer can now see and download this draft.</p>
+</section>
+{% elif can_release %}
+<section class="callout" aria-labelledby="h-release">
+  <h2 id="h-release">Check and release this draft</h2>
+  <p>The taxpayer can't see the form until a volunteer releases it. Open the form above, check the lines below, then release it.</p>
+  <form class="release" method="post" action="{{ url_for('release', session_id=session_id) }}">
+    <label class="choice"><input type="checkbox" name="checked" value="yes" required> I have checked this draft and it is ready for the taxpayer to see.</label>
+    <label for="released_by">Your name</label>
+    <input id="released_by" name="released_by" required autocomplete="name">
+    <label for="note">Note for the audit record <span class="hint">Optional</span></label>
+    <input id="note" name="note">
+    <button type="submit">Release to taxpayer</button>
+  </form>
+</section>
+{% endif %}
+
 <div class="columns">
   <div>
     <section aria-labelledby="h-lines">
