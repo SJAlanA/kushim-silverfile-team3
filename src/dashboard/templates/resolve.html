@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block title %}{{ condition_label(event.condition) }}{% endblock %}
 {% block content %}
-<p class="meta crumb"><a href="{{ url_for('session', session_id=session_id) }}">{{ taxpayer or "Ref. " ~ session_id|reference }}</a></p>
+<p class="meta crumb"><a href="{{ url_for('session', ref=session_id|reference) }}">{{ taxpayer or "Ref. " ~ session_id|reference }}</a></p>
 <h1>{{ condition_label(event.condition) }}</h1>
-<p class="lead">{{ event.reason }}</p>
+<p class="lead">{{ event.reason|cite }}</p>
 <dl class="facts">
   {% for name, value in details %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% endfor %}
   <dt>Flagged by</dt><dd>{{ event.raised_by|replace("_", " ")|capitalize }}, {{ event.raised_at|when }}</dd>
 </dl>
 
 {% if event.status == "resolved" %}
-  <p class="notice notice-ok">{{ decision_done(event.resolution.decision) }} by {{ event.resolution.resolved_by }}, {{ event.resolution.resolved_at|when }}.{% if event.resolution.note %} Note: {{ event.resolution.note }}{% endif %}</p>
+  <p class="notice notice-ok">{{ decision_done(event.resolution.decision) }} by {{ event.resolution.resolved_by }}, {{ event.resolution.resolved_at|when }}.{% if event.resolution.note %} Note: {{ event.resolution.note|cite }}{% endif %}</p>
 {% else %}
 {% set chosen = form.get("decision", "continue") %}
 <form method="post" class="resolve">
