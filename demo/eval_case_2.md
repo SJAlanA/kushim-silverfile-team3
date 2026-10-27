@@ -69,10 +69,10 @@ This is the real volunteer experience. You need two terminals, both in the repos
    | I'm sorry to have to ask this. Did your spouse pass away during 2025? | `yes` |
 
 4. Terminal 1 now prints `Waiting for a Kushim volunteer.` and pauses. This is the HITL event.
-5. In the dashboard, click **Waiting for review** in the top bar (or open http://localhost:8000/hitl). Find Rosa's row and click **Resolve**. The same session also appears under **Needs a human** on the Sessions page.
+5. In the dashboard, click **Needs a volunteer** in the top bar (or open http://localhost:8000/needs-a-volunteer). Find Rosa's row and click **Resolve**. The same return also appears under **Needs a volunteer** on the **Tax returns** page.
 6. Read the reason on the page (the spouse died during 2025, so the filing status needs a volunteer). Then fill in the form:
-   - **What should happen next?** `Continue: the run can go on as it is`
-   - **Corrected answers:** `filing_status = mfj`
+   - **What should happen next?** `Carry on with the return as it is`
+   - **Correct an answer:** Answer `Filing status` (already picked), Corrected value `married filing jointly`
    - **Note for the audit record:** `Spouse died August 2025, not remarried: joint return allowed for 2025 (policy.md#r-fs-02).`
    - **Your name:** your own name
 7. Click **Save decision**. Terminal 1 carries on by itself and asks the rest of the questions. Type:
@@ -96,7 +96,7 @@ This is the real volunteer experience. You need two terminals, both in the repos
    | How much did you pay the IRS in estimated tax payments ...? | `none` |
    | If you get a refund, whose bank account will it go into? | `my own checking account at Tompkins Community Bank` |
 
-8. The run ends with `Status: complete`. Open the session in the dashboard (the **Completed** group) to see the lines, the volunteer's decision under **Volunteer decisions**, and the note.
+8. The run ends with `Status: complete`. Open Rosa's return in the dashboard (the **Draft ready** group) to see the refund, every line with its working, the volunteer's decision under **Volunteer decisions**, and the note. The `policy.md#r-fs-02` in the note shows as a link to the rule on the **Policy rules** page.
 
 ## What to check
 
