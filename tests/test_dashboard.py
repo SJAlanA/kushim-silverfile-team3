@@ -39,7 +39,7 @@ def client(paused_session):
 def test_sessions_page_groups_the_paused_session(client):
     page = client.get("/").get_data(as_text=True)
     needs_human = page.split('id="h-needs_human"')[1].split("</section>")[0]
-    assert "Mara" in needs_human and "Needs a human" in needs_human
+    assert "Mara" in needs_human and "Needs a volunteer" in needs_human and "unclear" in needs_human
 
 
 def test_session_page_masks_the_ssn(client):

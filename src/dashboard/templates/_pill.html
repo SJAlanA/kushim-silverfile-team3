@@ -1,4 +1,4 @@
 {% set words = {"intake": "Answering questions", "extracting": "Reading documents", "rules": "Checking eligibility",
-                "computing": "Computing", "review": "In review", "awaiting_human": "Needs a human",
-                "complete": "Complete", "escalated": "Stopped by a volunteer"} %}
+                "computing": "Working out the numbers", "review": "Checking the return", "awaiting_human": "Needs a volunteer",
+                "complete": "Draft ready", "escalated": "Stopped by a volunteer"} %}
 <span class="pill pill-{{ status }}">{{ words.get(status, status) }}</span>

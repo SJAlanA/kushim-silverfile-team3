@@ -1,27 +1,42 @@
 {% extends "base.html" %}
+{% block title %}Tax returns{% endblock %}
 {% block content %}
-<h1>Sessions</h1>
-{% for key, label in labels %}
+<h1>Tax returns</h1>
+<p class="lead">Every Form 1040-SR that SilverFile is preparing, grouped by what it needs next.</p>
+{% for key, title in labels %}
   {% set rows = groups[key] %}
   <section class="group group-{{ key }}" aria-labelledby="h-{{ key }}">
-    <h2 id="h-{{ key }}">{{ label }} <span class="count">{{ rows|length }}</span></h2>
+    <h2 id="h-{{ key }}">{{ title }} <span class="count">{{ rows|length }}</span>
+      <span class="info">
+        <button type="button" class="info-button" aria-label="What does “{{ title }}” mean?" aria-describedby="tip-{{ key }}">i</button>
+        <span class="tip" role="tooltip" id="tip-{{ key }}">{{ info[key][0] }}</span>
+      </span>
+    </h2>
     {% if rows %}
     <table>
-      <thead><tr><th>Taxpayer</th><th>Status</th><th class="num">Open events</th><th>Last updated</th><th><span class="sr-only">Session</span></th></tr></thead>
+      <thead><tr>
+        <th class="col-who">Taxpayer</th><th class="col-stage">Stage</th><th class="col-when">Last updated</th>
+        {% if key == "needs_human" %}<th>Why it's waiting</th>{% else %}<th><span class="sr-only">Details</span></th>{% endif %}
+        <th class="col-action"><span class="sr-only">Action</span></th>
+      </tr></thead>
       <tbody>
       {% for row in rows %}
         <tr>
-          <td>{{ row.taxpayer or "Not given yet" }}</td>
+          <td>{{ row.taxpayer or "Name not given yet" }}<span class="hint">Ref. {{ row.session_id|reference }}</span></td>
           <td>{% with status=row.status %}{% include "_pill.html" %}{% endwith %}</td>
-          <td class="num">{{ row.open_hitl or "" }}</td>
-          <td>{{ row.updated_at|when }}</td>
-          <td class="end"><a href="{{ url_for('session', session_id=row.session_id) }}">Open {{ row.session_id }}</a></td>
+          <td data-label="Updated">{{ row.updated_at|when }}</td>
+          <td data-label="Why it's waiting" class="{{ 'reason' if key == 'needs_human' else 'spacer' }}">{% if key == "needs_human" %}{{ row.reasons|join("; ") }}{% endif %}</td>
+          <td class="end">
+            {% if key == "needs_human" %}<a class="button" href="{{ url_for('session', session_id=row.session_id) }}">Review</a>
+            {% elif key == "completed" %}<a href="{{ url_for('session', session_id=row.session_id) }}">View draft</a>
+            {% else %}<a href="{{ url_for('session', session_id=row.session_id) }}">View progress</a>{% endif %}
+          </td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
     {% else %}
-      <p class="empty">{% if key == "needs_human" %}Nothing is waiting for a volunteer.{% elif key == "in_progress" %}No sessions are running. Start one with <code>python run.py --interactive</code>.{% else %}No finished returns yet.{% endif %}</p>
+      <p class="empty-state">{{ info[key][1] }}</p>
     {% endif %}
   </section>
 {% endfor %}
