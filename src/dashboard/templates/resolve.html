@@ -1,36 +1,59 @@
 {% extends "base.html" %}
-{% block title %}Resolve {{ event.condition }}{% endblock %}
+{% block title %}{{ condition_label(event.condition) }}{% endblock %}
 {% block content %}
-{% set first = s.intake.get("taxpayer_first_name") if s.intake else None %}
-<p class="meta crumb"><a href="{{ url_for('session', session_id=session_id) }}">{{ first.value if first else session_id }}</a></p>
-<h1>{{ event.condition|replace("_", " ")|lower|capitalize }}</h1>
-<p class="lead">{{ event.reason }}</p>
+<p class="meta crumb"><a href="{{ url_for('session', ref=session_id|reference) }}">{{ taxpayer or "Ref. " ~ session_id|reference }}</a></p>
+<h1>{{ condition_label(event.condition) }}</h1>
+<p class="lead">{{ event.reason|cite }}</p>
 <dl class="facts">
-  <dt>Raised by</dt><dd>{{ event.raised_by|replace("_", " ")|capitalize }}</dd>
-  <dt>Raised</dt><dd>{{ event.raised_at|when }}</dd>
-  {% for key, value in (event.details or {}).items() if key != "fingerprint" %}
-    <dt>{{ key|replace("_", " ")|capitalize }}</dt><dd>{{ value|plain }}</dd>
-  {% endfor %}
+  {% for name, value in details %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% endfor %}
+  <dt>Flagged by</dt><dd>{{ event.raised_by|replace("_", " ")|capitalize }}, {{ event.raised_at|when }}</dd>
 </dl>
 
 {% if event.status == "resolved" %}
-  <p class="notice notice-ok">Resolved: {{ event.resolution.decision }} by {{ event.resolution.resolved_by }} on {{ event.resolution.resolved_at|when }}.{% if event.resolution.note %} Note: {{ event.resolution.note }}{% endif %}</p>
+  <p class="notice notice-ok">{{ decision_done(event.resolution.decision) }} by {{ event.resolution.resolved_by }}, {{ event.resolution.resolved_at|when }}.{% if event.resolution.note %} Note: {{ event.resolution.note|cite }}{% endif %}</p>
 {% else %}
+{% set chosen = form.get("decision", "continue") %}
 <form method="post" class="resolve">
   <fieldset>
     <legend>What should happen next?</legend>
-    {% for value, label in decisions.items() %}
-      <label class="choice"><input type="radio" name="decision" value="{{ value }}" required
-        {% if form.get("decision") == value or (not form.get("decision") and loop.first) %}checked{% endif %}> {{ label }}</label>
+    <label class="choice"><input type="radio" name="decision" value="continue" required {% if chosen == "continue" %}checked{% endif %}> {{ carry_on }}</label>
+    <p class="choice-group">Or send it back so SilverFile can:</p>
+    {% for value, label in send_backs.items() %}
+    <label class="choice choice-indent"><input type="radio" name="decision" value="{{ value }}" {% if chosen == value %}checked{% endif %}> {{ label }}</label>
     {% endfor %}
+    <label class="choice choice-stop"><input type="radio" name="decision" value="stop" {% if chosen == "stop" %}checked{% endif %}> {{ stop }}</label>
   </fieldset>
-  <label for="updates">Corrected answers <span class="hint">Optional. One per line, like <code>filing_status = single</code>.</span></label>
-  <textarea id="updates" name="updates" rows="3">{{ form.get("updates", "") }}</textarea>
+
+  <fieldset>
+    <legend>Correct an answer <span class="hint-inline">(optional)</span></legend>
+    {% set picked = form.get("correct_qid") or (asked_about if asked_about in correctable else "") %}
+    <div class="correction">
+      <label for="correct_qid">Answer</label>
+      <select id="correct_qid" name="correct_qid">
+        <option value="">Choose an answer</option>
+        {% for qid, item in correctable.items() %}
+        <option value="{{ qid }}" data-example="{{ item.example }}" {% if qid == picked %}selected{% endif %}>{{ item.label }}</option>
+        {% endfor %}
+      </select>
+      <label for="correct_value">Corrected value</label>
+      <input id="correct_value" name="correct_value" value="{{ form.get('correct_value', '') }}" aria-describedby="correct_hint">
+    </div>
+    <p class="hint" id="correct_hint">{% if picked %}Type {{ correctable[picked].example }}.{% else %}Leave this blank if no answer needs changing.{% endif %}</p>
+  </fieldset>
+
   <label for="note">Note for the audit record</label>
-  <textarea id="note" name="note" rows="3">{{ form.get("note", "") }}</textarea>
+  <textarea id="note" name="note" rows="3" placeholder="What you checked and why you decided this">{{ form.get("note", "") }}</textarea>
   <label for="resolved_by">Your name</label>
   <input id="resolved_by" name="resolved_by" required autocomplete="name" value="{{ form.get('resolved_by', '') }}">
   <button type="submit">Save decision</button>
 </form>
+<script>
+  // Keep the example under "Corrected value" in step with the answer picked.
+  document.getElementById("correct_qid").addEventListener("change", function () {
+    var example = this.selectedOptions[0].dataset.example;
+    document.getElementById("correct_hint").textContent =
+      example ? "Type " + example + "." : "Leave this blank if no answer needs changing.";
+  });
+</script>
 {% endif %}
 {% endblock %}

@@ -1,103 +1,125 @@
 {% extends "base.html" %}
-{% block title %}{{ session_id }}{% endblock %}
+{% set finished = s.status in ("complete", "escalated") %}
+{% block title %}{{ "Draft return" if s.status == "complete" else "Return" }}: {{ taxpayer or "New taxpayer" }}{% endblock %}
 {% block content %}
-{% set first = s.intake.get("taxpayer_first_name") if s.intake else None %}
+<p class="meta crumb"><a href="{{ url_for('sessions') }}">Tax returns</a></p>
 <div class="page-head">
-  <h1>{{ first.value if first else "New taxpayer" }}</h1>
+  <h1>{{ taxpayer or "New taxpayer" }}</h1>
   {% with status=s.status or "intake" %}{% include "_pill.html" %}{% endwith %}
 </div>
-<p class="meta">Session {{ session_id }}</p>
+<p class="meta">Ref. {{ session_id|reference }}</p>
 
 {% set open = s.hitl|selectattr("status", "equalto", "open")|list if s.hitl else [] %}
 {% if open %}
 <section class="callout" aria-labelledby="h-open">
   <h2 id="h-open">Waiting for a volunteer</h2>
   {% for event in open %}
-    <p><strong>{{ event.condition|replace("_", " ")|lower|capitalize }}.</strong> <span>{{ event.reason }}</span>
-       <a class="button" href="{{ url_for('resolve', session_id=session_id, event_id=event.event_id) }}">Resolve</a></p>
+    <p><strong>{{ condition_label(event.condition) }}.</strong> <span>{{ event.reason|cite }}</span>
+       <a class="button" href="{{ url_for('resolve', ref=session_id|reference, event_id=event.event_id) }}">Resolve</a></p>
   {% endfor %}
 </section>
 {% endif %}
 
-{% if s.outputs %}
-<section aria-labelledby="h-out">
-  <h2 id="h-out">Draft return</h2>
-  <ul class="links">
-    {% for kind, label in (("html", "Form 1040-SR (web page)"), ("pdf", "Form 1040-SR (PDF)"), ("audit", "Audit record (audit.json)")) %}
-      {% if s.outputs.get(kind) %}<li><a href="{{ url_for('output', session_id=session_id, kind=kind) }}">{{ label }}</a></li>{% endif %}
+{% if outcome or figures %}
+<section class="summary" aria-label="Key figures">
+  {% if outcome %}
+  <div class="outcome outcome-{{ outcome.kind }}">
+    <span class="figure-label">{{ outcome.label }}</span>
+    {% if outcome.kind != "even" %}<span class="figure-value">{{ outcome.value|dollars }}</span>{% endif %}
+    <span class="figure-line">Form line {{ outcome.line }}</span>
+  </div>
+  {% endif %}
+  <dl class="figures">
+    {% for figure in figures %}
+    <div><dt>{{ figure.label }}</dt><dd>{{ figure.value|dollars }}<span class="figure-line">Form line {{ figure.line }}</span></dd></div>
     {% endfor %}
-  </ul>
+  </dl>
+  {% if s.outputs %}
+  <nav class="outputs" aria-label="Draft return files">
+    {% for kind, label in (("html", "Open the draft form"), ("pdf", "Download PDF"), ("audit", "Audit record")) %}
+      {% if s.outputs.get(kind) %}<a {% if loop.first %}class="button"{% endif %} href="{{ url_for('output', ref=session_id|reference, kind=kind) }}">{{ label }}</a>{% endif %}
+    {% endfor %}
+  </nav>
+  {% endif %}
 </section>
 {% endif %}
+
+{% include "_glossary.html" %}
 
 <div class="columns">
   <div>
     <section aria-labelledby="h-lines">
-      <h2 id="h-lines">Return lines</h2>
+      <h2 id="h-lines">Form 1040-SR, line by line</h2>
       {% if sections %}
+      <p class="intro">Each row is one line of the IRS Form 1040-SR. The form line number, such as 1a or 11a, is where the amount goes on the paper form, so you can check it against the PDF.</p>
       <table class="lines">
-        <thead><tr><th>Line</th><th class="num">Amount</th><th>How it was worked out</th></tr></thead>
-        {% for title, rows in sections %}
+        <colgroup><col class="col-line"><col><col class="col-amount"></colgroup>
+        <thead><tr><th scope="col">Form line</th><th scope="col">What it is and where it came from</th><th scope="col" class="num">Amount</th></tr></thead>
+        {% for section in sections %}
         <tbody>
-          <tr class="section"><th colspan="3" scope="rowgroup">{{ title }}</th></tr>
-          {% for row in rows %}
+          <tr class="section"><th colspan="3" scope="rowgroup">{{ section.title }}</th></tr>
+          {% for row in section.rows %}
           <tr>
-            <td class="line-key"><strong>{{ row.key }}</strong>{% if row.label %}<span class="hint">{{ row.label }}</span>{% endif %}</td>
-            <td class="num amount">{{ row.value|dollars }}</td>
+            <td class="line-key">{{ row.key }}</td>
             <td>
-              {% for step in row.steps %}
-                {% if step.kind == "sum" %}
-                <table class="tape">
-                  {% for amount, what in step.terms %}
-                  <tr><td class="op">{{ "+" if not loop.first else (step.number ~ "." if step.number else "") }}</td><td class="num">{{ amount }}</td><td>{{ what }}</td></tr>
-                  {% endfor %}
-                  {% if step.terms|length > 1 %}<tr class="total"><td class="op">=</td><td class="num">{{ step.result }}</td><td></td></tr>{% endif %}
-                </table>
-                {% else %}
-                <div class="step"><span class="op">{{ step.number ~ "." if step.number }}</span><span>{{ step.text }}</span>{% if step.result %}<span class="num">= {{ step.result }}</span>{% endif %}</div>
-                {% endif %}
-              {% endfor %}
-              <span class="source">{% if row.sources %}From {{ row.sources|join(" · ") }}{% endif %}{% if row.tool %}{{ " · " if row.sources }}{{ row.tool }}{% endif %}</span>
-              {% if row.method %}<span class="source">{{ row.method }}</span>{% endif %}
+              <span class="line-label">{{ row.label or "Line " ~ row.key }}</span>
+              <span class="how">{{ row.how }}</span>
+              {% if row.worked or row.method %}
+              <details class="calc">
+                <summary>Show the calculation</summary>
+                {% include "_calculation.html" %}
+              </details>
+              {% endif %}
             </td>
+            <td class="num amount">{{ row.value|dollars }}</td>
           </tr>
           {% endfor %}
+          {% if section.zero_rows %}
+          <tr class="zero">
+            <td colspan="3">
+              <details>
+                <summary>{{ section.zero_rows|length }} {{ "line comes" if section.zero_rows|length == 1 else "lines come" }} to 0: {{ section.zero_rows|map(attribute="key")|join(", ") }}</summary>
+                <ul>
+                  {% for row in section.zero_rows %}
+                  <li><span class="line-key">{{ row.key }}</span> <span class="line-label">{{ row.label }}</span><span class="how">{{ row.how }}</span></li>
+                  {% endfor %}
+                </ul>
+              </details>
+            </td>
+          </tr>
+          {% endif %}
         </tbody>
         {% endfor %}
       </table>
-      {% else %}<p class="empty">No lines yet. They appear once Computation has run.</p>{% endif %}
+      {% else %}<p class="empty">No lines yet. They appear once the numbers have been worked out.</p>{% endif %}
     </section>
 
     <section aria-labelledby="h-docs">
       <h2 id="h-docs">Documents</h2>
-      {% if s.extracted %}
-      <table>
-        <thead><tr><th>Document</th><th>Read by</th><th class="num">Confidence</th><th>Values read</th></tr></thead>
-        <tbody>
-        {% for doc_id, record in s.extracted.items() %}
-          <tr>
-            <td>{{ record.doc_type }} <span class="source">{{ doc_id }}</span></td>
-            <td>{{ record.extractor }}</td>
-            <td class="num">{{ "%.0f"|format(record.confidence * 100) }}%</td>
-            <td>{% for field, value in record.fields.items() %}<span class="field">{{ field }} {{ value|dollars }}</span>{% endfor %}
-              {% for warning in record.warnings or [] %}<span class="warning">{{ warning }}</span>{% endfor %}</td>
-          </tr>
+      {% if documents %}
+      <ul class="documents">
+        {% for doc in documents %}
+        <li>
+          <div class="doc-head">
+            <strong>{{ doc.type }}</strong> <span class="muted">({{ doc.doc_id }})</span>
+            <span class="doc-source">{{ doc.how }}{% if doc.file %}: <a href="{{ url_for('document', ref=session_id|reference, doc_id=doc.doc_id) }}">{{ doc.file }}</a>{% endif %}{% if doc.confidence < 100 and doc.file %}, {{ doc.confidence }}% sure{% endif %}</span>
+          </div>
+          <dl class="values">{% for name, value in doc.fields %}<dt>{{ name }}</dt><dd>{{ value }}</dd>{% endfor %}</dl>
+          {% for warning in doc.warnings %}<p class="warning">{{ warning }}</p>{% endfor %}
+        </li>
         {% endfor %}
-        </tbody>
-      </table>
+      </ul>
       {% elif s.documents %}<p class="empty">{{ s.documents|length }} document(s) listed, not read yet.</p>
       {% else %}<p class="empty">No documents listed yet.</p>{% endif %}
     </section>
 
     <section aria-labelledby="h-review">
       <h2 id="h-review">Review</h2>
-      {% if s.review %}
-        <p>{{ "Passed" if s.review.passed else "Found problems" }} after {{ s.review_iterations or s.review.iteration or 1 }} round(s).</p>
-        {% if s.review.issues %}<ul>{% for issue in s.review.issues %}<li>{{ issue if issue is string else issue|plain }}</li>{% endfor %}</ul>{% endif %}
-      {% else %}<p class="empty">Review hasn't run yet.</p>{% endif %}
-      {% if review_notes %}
-        <ol class="notes">{% for note in review_notes %}<li>{{ note.kind|replace("_", " ")|capitalize }} to {{ note.to_agent }}: {{ note.reason }}</li>{% endfor %}</ol>
-      {% endif %}
+      {% if review %}
+        <p>{{ review.text }}</p>
+        {% if review.issues %}<ul>{% for issue in review.issues %}<li>{{ issue|cite }}</li>{% endfor %}</ul>{% endif %}
+        {% if review.sent_back %}<ul class="notes">{% for note in review.sent_back %}<li>Sent back to {{ note.to|replace("_", " ") }}: {{ note.reason|cite }}</li>{% endfor %}</ul>{% endif %}
+      {% else %}<p class="empty">The return hasn't been checked yet.</p>{% endif %}
     </section>
   </div>
 
@@ -105,7 +127,21 @@
     <section aria-labelledby="h-answers">
       <h2 id="h-answers">Answers so far</h2>
       {% if answers %}
-      <dl>{% for topic, value in answers %}<dt>{{ topic }}</dt><dd>{% if value is string %}{{ value }}{% else %}<ul class="parts">{% for part in value %}<li>{{ part }}</li>{% endfor %}</ul>{% endif %}</dd>{% endfor %}</dl>
+      <dl class="answers">
+        {% for answer in answers %}
+        <dt>{{ answer.label }}</dt>
+        <dd>
+          {% if answer.reveal %}
+          <span class="ssn" data-masked="{{ answer.value }}">{{ answer.value }}</span>
+          <button type="button" class="reveal" aria-pressed="false" aria-label="Show the full number"
+                  data-url="{{ url_for('reveal_ssn', ref=session_id|reference, qid=answer.reveal) }}">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path class="eye-open" d="M12 5C6.5 5 2.7 9.2 1.5 12c1.2 2.8 5 7 10.5 7s9.3-4.2 10.5-7C21.3 9.2 17.5 5 12 5Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z"/><path class="eye-shut" d="M3 3l18 18" stroke-width="2"/></svg>
+          </button>
+          {% elif answer.value is string %}{{ answer.value }}
+          {% else %}<ul class="parts">{% for part in answer.value %}<li>{{ part }}</li>{% endfor %}</ul>{% endif %}
+        </dd>
+        {% endfor %}
+      </dl>
       {% else %}<p class="empty">No answers yet.</p>{% endif %}
     </section>
     {% if s.hitl %}
@@ -113,13 +149,36 @@
       <h2 id="h-events">Volunteer decisions</h2>
       <ul class="events">
       {% for event in s.hitl %}
-        <li><strong>{{ event.condition|replace("_", " ")|lower|capitalize }}</strong>
-          {% if event.status == "resolved" %}— {{ event.resolution.decision }} by {{ event.resolution.resolved_by }}{% if event.resolution.note %}: “{{ event.resolution.note }}”{% endif %}
-          {% else %}— open{% endif %}</li>
+        <li><strong>{{ condition_label(event.condition) }}</strong>
+          {% if event.status == "resolved" %}<span class="hint">{{ decision_done(event.resolution.decision) }} by {{ event.resolution.resolved_by }}{% if event.resolution.note %}: “{{ event.resolution.note|cite }}”{% endif %}</span>
+          {% else %}<span class="hint">Still open</span>{% endif %}</li>
       {% endfor %}
       </ul>
     </section>
     {% endif %}
   </aside>
 </div>
+
+<script>
+  // Show or hide a full SSN. It is fetched only when asked for and never stored in the page source.
+  document.querySelectorAll("button.reveal").forEach(function (button) {
+    var shown = button.previousElementSibling;
+    button.addEventListener("click", function () {
+      if (button.getAttribute("aria-pressed") === "true") {
+        shown.textContent = shown.dataset.masked;
+        button.setAttribute("aria-pressed", "false");
+        button.setAttribute("aria-label", "Show the full number");
+        return;
+      }
+      fetch(button.dataset.url, {method: "POST"})
+        .then(function (response) { if (!response.ok) { throw new Error(); } return response.json(); })
+        .then(function (data) {
+          shown.textContent = data.value;
+          button.setAttribute("aria-pressed", "true");
+          button.setAttribute("aria-label", "Hide the full number");
+        })
+        .catch(function () { shown.textContent = shown.dataset.masked + " (couldn't load the number)"; });
+    });
+  });
+</script>
 {% endblock %}

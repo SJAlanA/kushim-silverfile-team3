@@ -121,14 +121,17 @@ python run.py --dashboard                              # or: make dashboard
 
 Open http://localhost:8000. The dashboard and any runs must use the same checkpoint database: `CHECKPOINT_DB` in `.env`, by default `silverfile_checkpoints.sqlite` in the repository root.
 
-- **Sessions** groups every session into *Needs a human*, *In progress* and *Completed*, showing first name, status and open events.
-- **Waiting for review** lists every open HITL event with its plain-language reason. Click **Resolve** to choose a decision:
-  - **Continue**, optionally with corrected answers such as `filing_status = mfj`;
-  - **Stop**, which ends the session for a volunteer to prepare by hand;
-  - **Send back** to a named agent.
+- **Tax returns** (`/returns`) groups every return into *Needs a volunteer*, *In progress* and *Draft ready*. An info icon beside each heading says what it means.
+- **Needs a volunteer** (`/needs-a-volunteer`) lists every open HITL event with its plain-language reason. Click **Resolve** to choose what happens next:
+  - **Carry on with the return as it is**, optionally correcting one answer (pick it, type the new value; it's read the same way as the taxpayer's answer);
+  - **Send it back** so SilverFile asks the taxpayer again, reads the documents again, checks eligibility again, works out the numbers again or checks the return again;
+  - **Stop here** and prepare the return by hand.
 
   Then add a note and your name, and **Save decision**. A paused `--interactive` run carries on by itself.
-- **A session's page** shows the answers (SSNs masked), documents, every line with its working, the review result, volunteer decisions, and links to the HTML form, PDF and `audit.json`.
+- **A return's page** (`/returns/<Ref.>`) leads with the refund or amount owed and the key figures, then every form line with a plain sentence on where its amount came from (*Show the calculation* opens the full working; lines that come to 0 are folded away). It also shows the documents read and the file each came from, the review result, the answers (SSNs masked, with an eye button to show the full test number), volunteer decisions, and links to the draft form, PDF and `audit.json`.
+- **Policy rules** (`/policy`) is the rule book. Every `policy.md#r-…` citation on the dashboard links to its rule.
+
+Old links (`/hitl`, `/sessions/<id>`) redirect to the new pages.
 
 The dashboard has no login and listens only on this machine (`127.0.0.1`). See [SECURITY.md](SECURITY.md).
 
