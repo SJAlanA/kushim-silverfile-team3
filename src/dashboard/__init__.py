@@ -21,7 +21,9 @@ from flask import Flask, abort, flash, redirect, render_template, request, send_
 from langgraph.types import Command
 
 from src.agents import orchestrator
-from src.agents.intake_questions import BY_ID
+from src.agents import intake_parsing
+from src.agents.intake_questions import BY_ID, QUESTIONS
+from src.form.labels import DOC_TYPE_LABELS as DOC_TYPE_NAMES
 from src.dashboard.views import documents, key_figures, line_sections, outcome, readable
 from src.graph import SEND_BACK, build_graph, validate_decision
 from src.memory import get_checkpointer, list_sessions
@@ -114,15 +116,20 @@ def create_app(db_path: str | None = None) -> Flask:
         event = next((e for e in values.get("hitl", []) if e["event_id"] == event_id), None)
         if event is None:
             abort(404)
+        def page(form, status=200):
+            return render_template("resolve.html", session_id=session_id, s=values, event=event, form=form,
+                                   taxpayer=full_name(values.get("intake", {})), details=event_details(event, values),
+                                   carry_on=DECISION_LABELS["continue"], stop=DECISION_LABELS["stop"],
+                                   send_backs={key: label for key, label in DECISION_LABELS.items()
+                                               if key.startswith(SEND_BACK)},
+                                   correctable=CORRECTABLE, asked_about=answer_to_correct(event)), status
         if request.method == "GET" or event["status"] != "open":
-            return render_template("resolve.html", session_id=session_id, s=values, event=event,
-                                   decisions=DECISION_LABELS, form={})
+            return page({})
         try:
             payload = resolution_from_form(request.form, event_id)
         except ValueError as error:
             flash(str(error), "error")
-            return render_template("resolve.html", session_id=session_id, s=values, event=event,
-                                   decisions=DECISION_LABELS, form=request.form), 400
+            return page(request.form, 400)
         if not _waiting_on(graph, session_id, event_id):
             flash("This session isn't paused on that event right now. Refresh and try again.", "error")
             return redirect(url_for("session", session_id=session_id))
@@ -169,9 +176,63 @@ def resolution_from_form(form, event_id: str) -> dict:
     resolved_by = form.get("resolved_by", "").strip()
     if not resolved_by:
         raise ValueError("Add your name so the audit record shows who resolved this.")
+    updates = parse_updates(form.get("updates", ""))
+    qid, raw = form.get("correct_qid", ""), form.get("correct_value", "").strip()
+    if qid and raw:
+        updates[qid] = parse_correction(qid, raw)
     return {"event_id": event_id, "decision": validate_decision(form.get("decision", "")),
-            "note": form.get("note", "").strip(), "resolved_by": resolved_by,
-            "updates": parse_updates(form.get("updates", ""))}
+            "note": form.get("note", "").strip(), "resolved_by": resolved_by, "updates": updates}
+
+
+# Answers a volunteer can correct from the resolve form, read with Intake's own parsers so a
+# correction is stored exactly as the taxpayer's answer would be. SSNs and structured answers
+# (documents, dependents, schedules) are left to Intake.
+_PARSERS = {"name": intake_parsing.parse_name, "date": intake_parsing.parse_date,
+            "yes_no": intake_parsing.parse_yes_no, "amount": intake_parsing.parse_amount,
+            "filing_status": lambda text: intake_parsing.parse_filing_status(text)[0]}
+_EXAMPLES = {"name": "a name, using letters only", "date": "a date such as June 21, 1958",
+             "yes_no": "yes or no", "amount": "a whole-dollar amount such as 1,200, or none",
+             "filing_status": "single, married filing jointly, married filing separately, head of household "
+                              "or qualifying surviving spouse"}
+
+
+def parse_correction(qid: str, raw: str):
+    """Read one corrected answer. Raises ValueError, in plain words, when it can't be read."""
+    if qid not in CORRECTABLE:
+        raise ValueError("That answer can't be corrected here. Send the return back to ask the taxpayer again.")
+    value = _PARSERS[BY_ID[qid].kind](raw)
+    if value is None:
+        raise ValueError(f"“{raw}” doesn't read as {CORRECTABLE[qid]['example']}. "
+                         f"Check the corrected {CORRECTABLE[qid]['label'].lower()} and try again.")
+    return value
+
+
+def answer_to_correct(event: dict) -> str | None:
+    """The answer a volunteer most likely needs to change for this event, picked in the form to start with."""
+    if event["condition"] == "FILING_STATUS_AMBIGUITY":
+        return "filing_status"
+    return (event.get("details") or {}).get("question_id")
+
+
+def event_details(event: dict, values: dict) -> list[tuple[str, str]]:
+    """What an event is about, in plain words: the question and its current answer, or the document."""
+    details, rows = event.get("details") or {}, []
+    qid = details.get("question_id")
+    if qid in BY_ID:
+        rows.append(("About", label(qid)))
+        current = (values.get("intake") or {}).get(qid)
+        if current and not BY_ID[qid].sensitive:
+            shown = readable(mask(current.get("value")), qid)
+            rows.append(("Current answer", shown if isinstance(shown, str) else "; ".join(shown)))
+    record = (values.get("extracted") or {}).get(details.get("doc_id"))
+    if details.get("doc_id"):
+        doc_type = (record or {}).get("doc_type") or "Document"
+        rows.append(("Document", f"{DOC_TYPE_NAMES.get(doc_type, doc_type)} ({details['doc_id']})"))
+    if details.get("taxpayer_said"):
+        rows.append(("Taxpayer said", f"“{details['taxpayer_said']}”"))
+    shown = {"question_id", "doc_id", "taxpayer_said", "fingerprint"}
+    rows += [(key.replace("_", " ").capitalize(), plain(value)) for key, value in details.items() if key not in shown]
+    return rows
 
 
 def parse_updates(text: str) -> dict:
@@ -251,3 +312,6 @@ def format_time(value: str) -> str:
         return value or ""
     hour = moment.hour % 12 or 12
     return f"{moment:%b} {moment.day}, {moment:%Y}, {hour}:{moment:%M} {'AM' if moment.hour < 12 else 'PM'} UTC"
+
+
+CORRECTABLE = {q.qid: {"label": label(q.qid), "example": _EXAMPLES[q.kind]} for q in QUESTIONS if q.kind in _PARSERS}

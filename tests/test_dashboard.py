@@ -146,3 +146,31 @@ def test_documents_read_in_plain_words():
                                              "fields": {"box1_wages": 30000, "employer_name": "Willowbrook"}}}})
     assert rows[0]["type"] == "W-2" and rows[0]["how"] == "Read from the image (OCR)"
     assert rows[0]["fields"] == [("Box 1, wages", "30,000"), ("Employer name", "Willowbrook")]
+
+
+def test_a_correction_picked_in_the_form_is_read_like_the_taxpayers_answer(client, paused_session):
+    _, graph = paused_session
+    event_id = graph.get_state(config("dash-1")).values["hitl"][0]["event_id"]
+    response = client.post(f"/sessions/dash-1/hitl/{event_id}",
+                           data={"decision": "continue", "resolved_by": "Dana",
+                                 "correct_qid": "taxpayer_dob", "correct_value": "June 21, 1958"})
+    assert response.status_code == 302
+    assert graph.get_state(config("dash-1")).values["intake"]["taxpayer_dob"]["value"] == "1958-06-21"
+
+
+def test_an_unreadable_correction_is_refused_in_plain_words(client, paused_session):
+    _, graph = paused_session
+    event_id = graph.get_state(config("dash-1")).values["hitl"][0]["event_id"]
+    response = client.post(f"/sessions/dash-1/hitl/{event_id}",
+                           data={"decision": "continue", "resolved_by": "Dana",
+                                 "correct_qid": "taxpayer_dob", "correct_value": "sometime last spring"})
+    assert response.status_code == 400 and "doesn&#39;t read as a date" in response.get_data(as_text=True)
+    assert graph.get_state(config("dash-1")).values["hitl"][0]["status"] == "open"
+
+
+def test_resolve_page_uses_plain_words_not_condition_codes(client, paused_session):
+    _, graph = paused_session
+    event_id = graph.get_state(config("dash-1")).values["hitl"][0]["event_id"]
+    page = client.get(f"/sessions/dash-1/hitl/{event_id}").get_data(as_text=True)
+    assert "An answer or document is unclear" in page and "Uncertain" not in page
+    assert "extract dispatch" not in page and "Read the documents again" in page

@@ -3,12 +3,13 @@
 {% block content %}
 <h1>Needs a volunteer</h1>
 {% if items %}
-<table>
-  <thead><tr><th>Taxpayer</th><th>What happened</th><th>Raised by</th><th>Raised</th><th><span class="sr-only">Action</span></th></tr></thead>
+<table class="queue">
+  <colgroup><col class="col-who"><col><col class="col-by"><col class="col-when"><col class="col-action"></colgroup>
+  <thead><tr><th>Taxpayer</th><th>What happened</th><th>Flagged by</th><th>Flagged</th><th><span class="sr-only">Action</span></th></tr></thead>
   <tbody>
   {% for row, event in items %}
     <tr>
-      <td>{{ row.taxpayer or row.session_id }}</td>
+      <td>{{ row.taxpayer or "Name not given yet" }}<span class="hint">Ref. {{ row.session_id|reference }}</span></td>
       <td><strong class="condition">{{ condition_label(event.condition) }}</strong><br>{{ event.reason }}</td>
       <td>{{ event.raised_by|replace("_", " ")|capitalize }}</td>
       <td>{{ event.raised_at|when }}</td>
