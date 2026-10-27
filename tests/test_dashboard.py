@@ -108,10 +108,41 @@ def test_structured_answers_read_as_short_lines_not_json():
 
     assert readable({"is_taxpayer": True, "relationship": None, "has_authority": None}) == ["Answering for themselves: Yes"]
     assert readable({"sch1_line10": 0}) == ["Schedule 1, line 10: 0"]
-    assert readable([{"doc_id": "w2_1", "doc_type": "W2", "path": "demo/w2_image_2.jpg"}]) == ["W-2 (w2_1): demo/w2_image_2.jpg"]
+    assert readable([{"doc_id": "w2_1", "doc_type": "W2", "path": "demo/w2_image_2.jpg"}]) == ["W-2 (w2_1)"]
+    assert readable("1958-06-21") == "June 21, 1958"
     assert readable("mfj", "filing_status") == "Married filing jointly" and readable([]) == "None"
 
 
 def test_session_page_shows_no_raw_json_or_placeholder_sources(client):
     page = client.get("/sessions/dash-1").get_data(as_text=True)
     assert '{"' not in page and "answer: " not in page
+
+
+def test_lines_that_come_to_zero_are_folded_apart():
+    from src.dashboard.views import line_sections
+
+    def line(value):
+        return {"value": value, "provenance": {"tool": "add", "formula": "", "sources": []}}
+
+    sections = line_sections({"lines": {"1z": line(30000), "4a": line(0), "34": line(662), "37": line(0)}})
+    assert [(s["title"], [r["key"] for r in s["rows"]], [r["key"] for r in s["zero_rows"]]) for s in sections] == [
+        ("Income", ["1z"], ["4a"]), ("Refund / Amount you owe", ["34"], ["37"])]
+
+
+def test_outcome_is_a_refund_an_amount_owed_or_neither():
+    from src.dashboard.views import outcome
+
+    def lines(refund, owed):
+        return {"lines": {"34": {"value": refund}, "37": {"value": owed}}}
+
+    assert outcome(lines(662, 0))["label"] == "Refund" and outcome(lines(0, 90))["value"] == 90
+    assert outcome(lines(0, 0))["kind"] == "even" and outcome({"lines": {}}) is None
+
+
+def test_documents_read_in_plain_words():
+    from src.dashboard.views import documents
+
+    rows = documents({"extracted": {"w2_1": {"doc_type": "W2", "extractor": "ocr", "confidence": 0.96,
+                                             "fields": {"box1_wages": 30000, "employer_name": "Willowbrook"}}}})
+    assert rows[0]["type"] == "W-2" and rows[0]["how"] == "Read from the image (OCR)"
+    assert rows[0]["fields"] == [("Box 1, wages", "30,000"), ("Employer name", "Willowbrook")]

@@ -22,7 +22,7 @@ from langgraph.types import Command
 
 from src.agents import orchestrator
 from src.agents.intake_questions import BY_ID
-from src.dashboard.views import line_sections, readable
+from src.dashboard.views import documents, key_figures, line_sections, outcome, readable
 from src.graph import SEND_BACK, build_graph, validate_decision
 from src.memory import get_checkpointer, list_sessions
 
@@ -52,10 +52,16 @@ CONDITION_LABELS = {
     "LOOP_GUARD": "SilverFile got stuck",
 }
 FINISHED = ("complete", "escalated")
-DECISION_LABELS = {"continue": "Continue: the run can go on as it is",
-                   "stop": "Stop: end this session and prepare the return by hand",
-                   **{f"{SEND_BACK}{agent}": f"Send back to {agent.replace('_', ' ')}"
-                      for agent in orchestrator.WORKERS}}
+# What a send-back asks each agent to do, in a volunteer's words.
+REDO = {"intake": "ask the taxpayer again", "extract_dispatch": "read the documents again",
+        "eligibility": "check eligibility again", "computation": "work out the numbers again",
+        "review": "check the return again"}
+DECISION_LABELS = {"continue": "Carry on with the return as it is",
+                   **{f"{SEND_BACK}{agent}": REDO[agent].capitalize() for agent in orchestrator.WORKERS},
+                   "stop": "Stop here and prepare this return by hand"}
+# The same decisions in the past tense, for the history on the return page and the confirmation.
+DECISION_DONE = {"continue": "Carried on", "stop": "Stopped",
+                 **{f"{SEND_BACK}{agent}": f"Sent back to {REDO[agent]}" for agent in orchestrator.WORKERS}}
 _SSN = re.compile(r"\b\d{3}[- ]?\d{2}[- ]?(\d{4})\b")
 
 
@@ -68,6 +74,7 @@ def create_app(db_path: str | None = None) -> Flask:
     app.jinja_env.filters["plain"] = plain
     app.jinja_env.filters["reference"] = reference
     app.jinja_env.globals["condition_label"] = lambda c: CONDITION_LABELS.get(c, c)
+    app.jinja_env.globals["decision_done"] = lambda d: DECISION_DONE.get(d, d)
     graph = build_graph(get_checkpointer(db_path))
 
     def state_of(session_id: str) -> dict:
@@ -96,7 +103,9 @@ def create_app(db_path: str | None = None) -> Flask:
         values = state_of(session_id)
         return render_template("session.html", session_id=session_id, s=values,
                                answers=masked_answers(values.get("intake", {})),
-                               sections=line_sections(values),
+                               sections=line_sections(values), outcome=outcome(values),
+                               figures=key_figures(values), documents=documents(values),
+                               taxpayer=full_name(values.get("intake", {})),
                                review_notes=[m for m in values.get("handoffs", []) if m["from_agent"] == "review"])
 
     @app.route("/sessions/<session_id>/hitl/<event_id>", methods=["GET", "POST"])
@@ -118,7 +127,7 @@ def create_app(db_path: str | None = None) -> Flask:
             flash("This session isn't paused on that event right now. Refresh and try again.", "error")
             return redirect(url_for("session", session_id=session_id))
         graph.invoke(Command(resume=payload), _config(session_id))
-        flash(f"Resolved: {DECISION_LABELS[payload['decision']].split(':')[0]}.", "ok")
+        flash(f"Saved. {DECISION_DONE[payload['decision']]} by {payload['resolved_by']}.", "ok")
         return redirect(url_for("session", session_id=session_id))
 
     @app.get("/sessions/<session_id>/outputs/<kind>")
@@ -221,6 +230,12 @@ def label(qid: str) -> str:
     """'taxpayer_ssn' -> 'Taxpayer SSN', 'spouse_dob' -> 'Spouse date of birth'."""
     text = " ".join("date of birth" if word == "dob" else word for word in qid.split("_")).capitalize()
     return text.replace("ssn", "SSN")
+
+
+def full_name(intake: dict) -> str:
+    """'Mara Lindqvist', or just the first name, or '' before the name is given."""
+    parts = [(intake.get(qid) or {}).get("value") for qid in ("taxpayer_first_name", "taxpayer_last_name")]
+    return " ".join(str(part) for part in parts if part)
 
 
 def reference(session_id: str) -> str:

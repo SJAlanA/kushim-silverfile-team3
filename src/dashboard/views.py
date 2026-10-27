@@ -11,8 +11,10 @@ from __future__ import annotations
 
 import re
 
-from src.form.labels import (DOC_TYPE_LABELS, FILING_STATUS_LABELS, SCHEDULE_FIELD_LABELS, SECTIONS,
-                             describe_source)
+from datetime import date
+
+from src.form.labels import (DOC_TYPE_LABELS, FIELD_LABELS, FILING_STATUS_LABELS,
+                             SCHEDULE_FIELD_LABELS, SECTIONS, describe_source)
 
 _TERM = re.compile(r"^(-?[\d,]+(?:\.\d+)?) \((.+)\)$")
 _STEP_NUMBER = re.compile(r"^(\d+)\. (.*)$")
@@ -28,23 +30,49 @@ KEY_LABELS = {"is_taxpayer": "Answering for themselves", "relationship": "Relati
               **SCHEDULE_FIELD_LABELS}
 
 
+# Figures a reviewer checks first, in the order they read down the form.
+KEY_FIGURES = (("9", "Total income"), ("11a", "Adjusted gross income"), ("24", "Total tax"),
+               ("33", "Total payments"))
+EXTRACTORS = {"vision": "Read from the image by Claude", "ocr": "Read from the image (OCR)",
+              "json": "Taken from a data file", "failed": "Could not be read"}
+
+
 # ---------------------------------------------------------------------------
 # Return lines
 # ---------------------------------------------------------------------------
 
-def line_sections(values: dict) -> list[tuple[str, list[dict]]]:
-    """Lines in form order under their 1040-SR section; any line the form map doesn't know goes last."""
+def outcome(values: dict) -> dict | None:
+    """The bottom line of the return: a refund, an amount owed, or neither. None before line 34/37 exist."""
+    lines = values.get("lines") or {}
+    refund, owed = (lines.get(key, {}).get("value") for key in ("34", "37"))
+    if refund is None and owed is None:
+        return None
+    if refund:
+        return {"kind": "refund", "label": "Refund", "line": "34", "value": refund}
+    if owed:
+        return {"kind": "owed", "label": "Amount owed", "line": "37", "value": owed}
+    return {"kind": "even", "label": "No refund and nothing owed", "line": "34", "value": 0}
+
+
+def key_figures(values: dict) -> list[dict]:
+    lines = values.get("lines") or {}
+    return [{"line": key, "label": label, "value": lines[key]["value"]} for key, label in KEY_FIGURES if key in lines]
+
+
+def line_sections(values: dict) -> list[dict]:
+    """Lines in form order under their 1040-SR section; any line the form map doesn't know goes last.
+
+    A section's lines that come to 0 are listed apart (`zero_rows`), so the page shows the lines
+    that carry amounts and folds the empty ones away without hiding them.
+    """
     lines, extracted = values.get("lines") or {}, values.get("extracted") or {}
-    sections, seen = [], set()
+    groups, seen = [], set()
     for title, rows in SECTIONS:
-        shown = [line_row(key, label, lines[key], extracted) for key, label in rows if key in lines]
+        groups.append((title, [line_row(key, label, lines[key], extracted) for key, label in rows if key in lines]))
         seen.update(key for key, _ in rows)
-        if shown:
-            sections.append((title, shown))
-    extra = [line_row(key, "", line, extracted) for key, line in lines.items() if key not in seen]
-    if extra:
-        sections.append(("Other lines", extra))
-    return sections
+    groups.append(("Other lines", [line_row(key, "", line, extracted) for key, line in lines.items() if key not in seen]))
+    return [{"title": title, "rows": [r for r in rows if r["value"] != 0],
+             "zero_rows": [r for r in rows if r["value"] == 0]} for title, rows in groups if rows]
 
 
 def line_row(key: str, label: str, line: dict, extracted: dict) -> dict:
@@ -116,8 +144,33 @@ def readable(value, qid: str = "") -> str | list[str]:
 
 
 def document_line(doc: dict) -> str:
-    doc_type = DOC_TYPE_LABELS.get(doc.get("doc_type"), doc.get("doc_type") or "Document")
-    return f"{doc_type} ({doc.get('doc_id', '?')}): {doc.get('path', '')}"
+    """'W-2 (w2_1)'. The file path is left out: it means nothing to a volunteer."""
+    return f"{doc_type_label(doc.get('doc_type'))} ({doc.get('doc_id', '?')})"
+
+
+def doc_type_label(doc_type: str | None) -> str:
+    return DOC_TYPE_LABELS.get(doc_type, doc_type or "Document")
+
+
+def documents(values: dict) -> list[dict]:
+    """Each document read, with its values in plain words: 'Box 1, wages' rather than 'box1_wages'."""
+    rows = []
+    for doc_id, record in (values.get("extracted") or {}).items():
+        fields = [(FIELD_LABELS.get(name, name.replace("_", " ")).capitalize(), field_value(value))
+                  for name, value in (record.get("fields") or {}).items()]
+        rows.append({"doc_id": doc_id, "type": doc_type_label(record.get("doc_type")), "fields": fields,
+                     "how": EXTRACTORS.get(record.get("extractor"), record.get("extractor", "")),
+                     "confidence": round(float(record.get("confidence", 0)) * 100),
+                     "warnings": record.get("warnings") or []})
+    return rows
+
+
+def field_value(value) -> str:
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, int):
+        return f"{value:,}"
+    return str(value) if value not in (None, "") else "Blank"
 
 
 def scalar(value) -> str:
@@ -127,7 +180,17 @@ def scalar(value) -> str:
         return "—"
     if isinstance(value, int):
         return f"{value:,}"
+    if isinstance(value, str) and (day := _iso_date(value)):
+        return f"{day:%B} {day.day}, {day.year}"
     return str(value)
+
+
+def _iso_date(text: str) -> date | None:
+    """A date answer stored as YYYY-MM-DD, read for display as 'June 21, 1958'."""
+    try:
+        return date.fromisoformat(text) if len(text) == 10 else None
+    except ValueError:
+        return None
 
 
 def key_label(key: str) -> str:
