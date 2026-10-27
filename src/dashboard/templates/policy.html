@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Policy rules{% endblock %}
+{% block content %}
+<h1>Policy rules</h1>
+<p class="lead">The rules SilverFile follows when it checks eligibility and decides when a volunteer is needed. Agents and volunteers cite them by ID, such as R-FS-02.</p>
+{% for section, items in sections %}
+<section class="policy-section">
+  <h2>{{ section }}</h2>
+  {% for rule in items %}
+  <article class="rule" id="{{ rule.id|lower }}">
+    <h3><span class="rule-id">{{ rule.id }}</span> {{ rule.title }}</h3>
+    <p>{{ rule.text|inline }}</p>
+    {% if rule.action %}<p><span class="muted">What SilverFile does:</span> {{ rule.action|inline }}</p>{% endif %}
+    {% if rule.source %}<p class="hint">Source: {{ rule.source|inline }}</p>{% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endfor %}
+{% endblock %}
