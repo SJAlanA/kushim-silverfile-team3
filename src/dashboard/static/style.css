@@ -124,3 +124,18 @@ input:not([type="radio"]), textarea {
   table { display: block; overflow-x: auto; }
   h1 { font-size: 28px; }
 }
+
+/* Return lines: one block per form section, each calculation laid out like a worksheet */
+.lines .section th { background: var(--paper); color: var(--ink); font-size: 15px; text-transform: uppercase; letter-spacing: .04em; padding-top: var(--s3); }
+.lines .line-key { white-space: nowrap; }
+.lines .line-key .hint { white-space: normal; max-width: 16ch; font-size: 14px; }
+.lines .amount { font-weight: 700; }
+.tape { width: auto; border: 0; background: none; margin: 0 0 var(--s2); }
+.tape td { padding: 1px var(--s2) 1px 0; border: 0; }
+.tape .op { width: 1.6em; color: var(--muted); text-align: center; }
+.tape .total td { border-top: 1px solid var(--ink); font-weight: 700; padding-top: 2px; }
+.step { display: grid; grid-template-columns: 1.6em minmax(0, 1fr) auto; gap: 0 var(--s2); padding: 1px 0; }
+.step .op { color: var(--muted); text-align: center; }
+.step .num { font-weight: 600; }
+.lines .source { margin-top: var(--s1); }
+.parts { list-style: none; margin: 0; padding: 0; }

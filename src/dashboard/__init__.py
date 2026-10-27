@@ -22,6 +22,7 @@ from langgraph.types import Command
 
 from src.agents import orchestrator
 from src.agents.intake_questions import BY_ID
+from src.dashboard.views import line_sections, readable
 from src.graph import SEND_BACK, build_graph, validate_decision
 from src.memory import get_checkpointer, list_sessions
 
@@ -65,6 +66,7 @@ def create_app(db_path: str | None = None) -> Flask:
         values = state_of(session_id)
         return render_template("session.html", session_id=session_id, s=values,
                                answers=masked_answers(values.get("intake", {})),
+                               sections=line_sections(values),
                                review_notes=[m for m in values.get("handoffs", []) if m["from_agent"] == "review"])
 
     @app.route("/sessions/<session_id>/hitl/<event_id>", methods=["GET", "POST"])
@@ -162,15 +164,15 @@ def mask(value):
     return value
 
 
-def masked_answers(intake: dict) -> list[tuple[str, object]]:
-    """(topic, value) rows in question order. Sensitive answers show only their last four digits."""
+def masked_answers(intake: dict) -> list[tuple[str, str | list[str]]]:
+    """(topic, readable value) rows in question order. Sensitive answers show only their last four digits."""
     rows = []
     for qid, answer in intake.items():
         question = BY_ID.get(qid)
         value = mask(answer.get("value"))
         if question and question.sensitive and not isinstance(value, str):
             value = "•••-••-••••"
-        rows.append((label(qid), value))
+        rows.append((label(qid), readable(value, qid)))
     return rows
 
 

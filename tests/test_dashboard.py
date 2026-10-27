@@ -72,3 +72,46 @@ def test_resolve_needs_a_name(client, paused_session):
     response = client.post(f"/sessions/dash-1/hitl/{event_id}", data={"decision": "continue", "resolved_by": ""})
     assert response.status_code == 400
     assert graph.get_state(config("dash-1")).values["hitl"][0]["status"] == "open"
+
+
+# --- how the session page lays out calculations and answers -------------------------------
+
+def test_an_addition_becomes_a_tape_of_terms_and_a_total():
+    from src.dashboard.views import calculation
+
+    steps = calculation("30,000 (line 1z wages) + 300 (line 2b interest) + 0 (line 20 (Schedule 3, line 8)) = 30,300")
+    assert steps == [{"kind": "sum", "number": "", "result": "30,300",
+                      "terms": [("30,000", "line 1z wages"), ("300", "line 2b interest"),
+                                ("0", "line 20 (Schedule 3, line 8)")]}]
+
+
+def test_a_worksheet_splits_into_numbered_steps_with_results_on_the_right():
+    from src.dashboard.views import calculation
+
+    steps = calculation("1. Benefits 12,000; 7. 36,400 - 0 = 36,400; MAGI 36,940 is not over 75,000, no phase-out")
+    assert [(s["number"], s["text"], s["result"]) for s in steps] == [
+        ("1", "Benefits", "12,000"), ("7", "36,400 - 0", "36,400"),
+        ("", "MAGI 36,940 is not over 75,000, no phase-out", "")]
+
+
+def test_line_sources_are_named_and_grouped():
+    from src.dashboard.views import line_row
+
+    line = {"value": 5, "provenance": {"tool": "add", "formula": "", "method_note": "Sum of the listed amounts",
+                                       "sources": [{"line": "1z"}, {"line": "2b"}, {"rules": "box_count"}]}}
+    row = line_row("9", "Total income", line, {})
+    assert row["sources"] == ["Lines 1z, 2b", "Eligibility rules: line 12d box count"] and row["method"] == ""
+
+
+def test_structured_answers_read_as_short_lines_not_json():
+    from src.dashboard.views import readable
+
+    assert readable({"is_taxpayer": True, "relationship": None, "has_authority": None}) == ["Answering for themselves: Yes"]
+    assert readable({"sch1_line10": 0}) == ["Schedule 1, line 10: 0"]
+    assert readable([{"doc_id": "w2_1", "doc_type": "W2", "path": "demo/w2_image_2.jpg"}]) == ["W-2 (w2_1): demo/w2_image_2.jpg"]
+    assert readable("mfj", "filing_status") == "Married filing jointly" and readable([]) == "None"
+
+
+def test_session_page_shows_no_raw_json_or_placeholder_sources(client):
+    page = client.get("/sessions/dash-1").get_data(as_text=True)
+    assert '{"' not in page and "answer: " not in page
