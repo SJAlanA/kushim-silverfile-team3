@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Sessions{% endblock %} · Kushim SilverFile</title>
+  <title>{% block title %}Tax returns{% endblock %} · Kushim SilverFile</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -11,8 +11,8 @@
     <div class="wrap masthead-row">
       <a class="brand" href="{{ url_for('sessions') }}">Kushim SilverFile</a>
       <nav aria-label="Main">
-        <a href="{{ url_for('sessions') }}" {% if request.endpoint == 'sessions' %}aria-current="page"{% endif %}>Sessions</a>
-        <a href="{{ url_for('queue') }}" {% if request.endpoint == 'queue' %}aria-current="page"{% endif %}>Waiting for review</a>
+        <a href="{{ url_for('sessions') }}" {% if request.endpoint == 'sessions' %}aria-current="page"{% endif %}>Tax returns</a>
+        <a href="{{ url_for('queue') }}" {% if request.endpoint == 'queue' %}aria-current="page"{% endif %}>Needs a volunteer</a>
       </nav>
     </div>
   </header>

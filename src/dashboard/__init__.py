@@ -22,10 +22,35 @@ from langgraph.types import Command
 
 from src.agents import orchestrator
 from src.agents.intake_questions import BY_ID
+from src.dashboard.views import line_sections, readable
 from src.graph import SEND_BACK, build_graph, validate_decision
 from src.memory import get_checkpointer, list_sessions
 
-GROUPS = (("needs_human", "Needs a human"), ("in_progress", "In progress"), ("completed", "Completed"))
+GROUPS = (("needs_human", "Needs a volunteer"), ("in_progress", "In progress"), ("completed", "Draft ready"))
+# What each home-page group means, shown in the info tip beside its heading, and what it says when empty.
+GROUP_INFO = {
+    "needs_human": ("SilverFile has paused these returns because something needs a person to check, such as an "
+                    "unclear answer or a document it couldn't read. A volunteer reviews it and decides how to go on.",
+                    "Nothing needs a volunteer right now. Returns that need a decision will appear here."),
+    "in_progress": ("SilverFile is still preparing these returns: the taxpayer is answering questions, or their "
+                    "documents are being read and the numbers worked out. Nothing is needed from you yet.",
+                    "No returns are being prepared at the moment. New ones will appear here as they start."),
+    "completed": ("These draft returns are finished and have passed SilverFile's checks. A volunteer goes through "
+                  "the draft with the taxpayer before anything is filed.",
+                  "Finished draft returns will appear here."),
+}
+# Why a return is waiting, in plain words (contract HITL conditions).
+CONDITION_LABELS = {
+    "OUT_OF_SCOPE": "Something outside what SilverFile can prepare",
+    "DOC_CONFLICT": "Documents disagree",
+    "R1099_TAXABLE_NOT_DETERMINED": "Retirement income needs checking",
+    "TAX_ADVICE": "Taxpayer asked for advice",
+    "FILING_STATUS_AMBIGUITY": "Filing status needs a decision",
+    "EXPLOITATION": "Possible pressure or misuse",
+    "UNCERTAIN": "An answer or document is unclear",
+    "REVIEW_LIMIT": "The return failed its checks repeatedly",
+    "LOOP_GUARD": "SilverFile got stuck",
+}
 FINISHED = ("complete", "escalated")
 DECISION_LABELS = {"continue": "Continue: the run can go on as it is",
                    "stop": "Stop: end this session and prepare the return by hand",
@@ -41,6 +66,8 @@ def create_app(db_path: str | None = None) -> Flask:
     app.jinja_env.filters["when"] = format_time
     app.jinja_env.filters["dollars"] = lambda value: f"{value:,}" if isinstance(value, int) else value
     app.jinja_env.filters["plain"] = plain
+    app.jinja_env.filters["reference"] = reference
+    app.jinja_env.globals["condition_label"] = lambda c: CONDITION_LABELS.get(c, c)
     graph = build_graph(get_checkpointer(db_path))
 
     def state_of(session_id: str) -> dict:
@@ -51,8 +78,12 @@ def create_app(db_path: str | None = None) -> Flask:
 
     @app.get("/")
     def sessions():
-        rows = list_sessions(db_path)
-        return render_template("sessions.html", groups=group_sessions(rows), labels=GROUPS)
+        groups = group_sessions(list_sessions(db_path))
+        for row in groups["needs_human"]:
+            row["reasons"] = list(dict.fromkeys(
+                CONDITION_LABELS.get(e["condition"], e["condition"])
+                for e in orchestrator.open_events(state_of(row["session_id"])))) or ["Waiting for a volunteer"]
+        return render_template("sessions.html", groups=groups, labels=GROUPS, info=GROUP_INFO)
 
     @app.get("/hitl")
     def queue():
@@ -65,6 +96,7 @@ def create_app(db_path: str | None = None) -> Flask:
         values = state_of(session_id)
         return render_template("session.html", session_id=session_id, s=values,
                                answers=masked_answers(values.get("intake", {})),
+                               sections=line_sections(values),
                                review_notes=[m for m in values.get("handoffs", []) if m["from_agent"] == "review"])
 
     @app.route("/sessions/<session_id>/hitl/<event_id>", methods=["GET", "POST"])
@@ -162,15 +194,15 @@ def mask(value):
     return value
 
 
-def masked_answers(intake: dict) -> list[tuple[str, object]]:
-    """(topic, value) rows in question order. Sensitive answers show only their last four digits."""
+def masked_answers(intake: dict) -> list[tuple[str, str | list[str]]]:
+    """(topic, readable value) rows in question order. Sensitive answers show only their last four digits."""
     rows = []
     for qid, answer in intake.items():
         question = BY_ID.get(qid)
         value = mask(answer.get("value"))
         if question and question.sensitive and not isinstance(value, str):
             value = "•••-••-••••"
-        rows.append((label(qid), value))
+        rows.append((label(qid), readable(value, qid)))
     return rows
 
 
@@ -191,9 +223,16 @@ def label(qid: str) -> str:
     return text.replace("ssn", "SSN")
 
 
+def reference(session_id: str) -> str:
+    """A short reference staff can read out: 'eval_case_1-3d7db7' -> '3D7DB7'."""
+    return session_id.rsplit("-", 1)[-1].upper()
+
+
 def format_time(value: str) -> str:
+    """'Oct 25, 2026, 9:48 PM UTC'."""
     try:
         moment = datetime.fromisoformat(value)
     except (TypeError, ValueError):
         return value or ""
-    return f"{moment:%b} {moment.day}, {moment:%Y %H:%M} UTC"
+    hour = moment.hour % 12 or 12
+    return f"{moment:%b} {moment.day}, {moment:%Y}, {hour}:{moment:%M} {'AM' if moment.hour < 12 else 'PM'} UTC"
