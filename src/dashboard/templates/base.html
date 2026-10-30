@@ -13,6 +13,7 @@
       <nav aria-label="Main">
         <a href="{{ url_for('sessions') }}" {% if request.endpoint == 'sessions' %}aria-current="page"{% endif %}>Tax returns</a>
         <a href="{{ url_for('queue') }}" {% if request.endpoint == 'queue' %}aria-current="page"{% endif %}>Needs a volunteer</a>
+        <a href="{{ url_for('policy_page') }}" {% if request.endpoint == 'policy_page' %}aria-current="page"{% endif %}>Policy rules</a>
       </nav>
     </div>
   </header>

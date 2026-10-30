@@ -29,7 +29,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-.wrap { max-width: 1100px; margin: 0 auto; padding: 0 var(--s4); }
+.wrap { max-width: 1200px; margin: 0 auto; padding: 0 var(--s4); }
 main.wrap { padding-bottom: var(--s5); }
 
 a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
@@ -127,8 +127,8 @@ input:not([type="radio"]), textarea {
 
 /* Return lines: one block per form section, each calculation laid out like a worksheet */
 .lines .section th { background: var(--paper); color: var(--ink); font-size: 15px; text-transform: uppercase; letter-spacing: .04em; padding-top: var(--s3); }
-.lines .line-key { white-space: nowrap; }
-.lines .line-key .hint { white-space: normal; max-width: 16ch; font-size: 14px; }
+.lines { table-layout: fixed; }
+.lines .col-line { width: 96px; } .lines .col-amount { width: 120px; }
 .lines .amount { font-weight: 700; }
 .tape { width: auto; border: 0; background: none; margin: 0 0 var(--s2); }
 .tape td { padding: 1px var(--s2) 1px 0; border: 0; }
@@ -178,6 +178,98 @@ input:not([type="radio"]), textarea {
   .group td.spacer { display: none; }
   .group td.end { text-align: left; margin-top: var(--s2); }
 }
+
+/* Return page: the bottom line and the figures a reviewer checks first, above the detail */
+.summary { display: flex; align-items: stretch; gap: var(--s5); margin-top: var(--s4); padding: var(--s4);
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; }
+.outcome { display: flex; flex-direction: column; justify-content: center; padding-right: var(--s5);
+  border-right: 1px solid var(--rule); min-width: 180px; }
+.outcome .figure-label { font-weight: 600; }
+.outcome .figure-value { font-size: 40px; line-height: 1.1; font-weight: 700; }
+.outcome-even .figure-label { font-size: 21px; line-height: 1.3; }
+.figure-line { display: block; color: var(--muted); font-size: 14px; font-weight: 400; }
+.figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s3) var(--s4); align-content: center; flex: 1; }
+.figures dd { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.3; }
+.outputs { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: var(--s2); white-space: nowrap; }
+
+/* Lines that come to 0 are folded into one row per section */
+.lines .zero td { padding-top: var(--s2); padding-bottom: var(--s2); }
+.lines details summary { cursor: pointer; color: var(--muted); }
+.lines details summary:hover { color: var(--ink); }
+.lines details ul { list-style: none; margin: var(--s2) 0 0; padding: 0; }
+.lines details li { padding: var(--s1) 0; }
+
+/* Document values: each on its own line, labels left and amounts right */
+.values { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px var(--s4); max-width: 440px; }
+.values dt { font-size: 16px; color: var(--ink); }
+.values dd { margin: 0; text-align: right; }
+.events .hint { display: block; }
+
+/* Resolve form: carry on, send back (grouped and indented) or stop; one answer can be corrected */
+.choice-group { margin: var(--s3) 0 var(--s1); color: var(--muted); font-size: 15px; }
+.choice-indent { padding-left: var(--s4); }
+.choice-stop { margin-top: var(--s3); padding-top: var(--s3); border-top: 1px solid var(--rule); }
+.hint-inline { color: var(--muted); font-weight: 400; }
+.correction { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s2) var(--s3); align-items: center; }
+.correction label { font-weight: 600; }
+select { font: inherit; color: inherit; width: 100%; padding: var(--s2); border: 1px solid #aab4b1; border-radius: 4px; background: var(--surface); }
+fieldset .hint { margin: var(--s2) 0 0; }
+
+/* Queue: fixed columns so names, dates and buttons line up */
+.queue { table-layout: fixed; }
+.queue .col-who { width: 170px; } .queue .col-by { width: 120px; } .queue .col-when { width: 220px; } .queue .col-action { width: 120px; }
+
+/* Draft page, calmer: one sentence per line, the calculation behind a disclosure */
+.intro { color: var(--muted); max-width: 70ch; margin: calc(-1 * var(--s2)) 0 var(--s3); }
+.muted { color: var(--muted); font-weight: 400; }
+.lines > tbody > tr > td { padding-top: 14px; padding-bottom: 14px; }
+.lines td.line-key { font-weight: 700; font-size: 18px; }
+.line-label { display: block; font-weight: 600; }
+.how { display: block; color: var(--muted); font-size: 15px; margin-top: 2px; max-width: 68ch; }
+.lines .amount { font-size: 18px; }
+details.calc { margin-top: var(--s2); }
+details.calc summary, .glossary summary, .lines .zero summary { cursor: pointer; color: var(--focus); font-size: 15px; }
+details.calc[open] summary { margin-bottom: var(--s2); }
+details.calc .tape, details.calc .step { font-size: 15px; }
+.method { color: var(--muted); font-size: 14px; margin: var(--s2) 0 0; }
+.lines .zero li { display: grid; grid-template-columns: 48px minmax(0, 1fr); column-gap: var(--s2); padding: var(--s2) 0; }
+.lines .zero li .line-key { grid-row: span 2; font-weight: 700; }
+.lines .zero li .how { grid-column: 2; }
+
+/* Glossary: closed by default, two columns when open */
+.glossary { margin-top: var(--s4); padding: var(--s3) var(--s4); background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; }
+.glossary[open] summary { margin-bottom: var(--s3); }
+.glossary dl { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: var(--s2) var(--s4); }
+.glossary dt { color: var(--ink); font-weight: 600; font-size: 16px; }
+.glossary dd { margin: 0; max-width: 72ch; }
+
+/* Documents as a list: what each one says, and the file it came from */
+.documents { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--rule); }
+.documents > li { padding: var(--s3); border-bottom: 1px solid var(--rule); }
+.documents > li:last-child { border-bottom: 0; }
+.doc-head { margin-bottom: var(--s2); }
+.doc-source { display: block; color: var(--muted); font-size: 15px; }
+.documents .values { max-width: 520px; }
+.documents .warning { margin: var(--s2) 0 0; }
+
+/* Answers: an SSN can be shown on request */
+.answers dd { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+.answers dd .parts { flex-basis: 100%; }
+.reveal { padding: 2px 6px; background: transparent; color: var(--muted); border: 1px solid var(--rule); line-height: 0; }
+.reveal:hover { background: var(--rule); color: var(--ink); }
+.reveal svg { fill: currentColor; stroke: currentColor; }
+.reveal .eye-shut { display: none; fill: none; }
+.reveal[aria-pressed="true"] .eye-shut { display: inline; }
+
+/* Policy citations and the policy page */
+.policy-ref { text-decoration-style: dotted; }
+.policy-section h2 { margin-top: var(--s5); }
+.rule { padding: var(--s3) var(--s4); margin-bottom: var(--s3); background: var(--surface); border: 1px solid var(--rule); border-radius: 4px; max-width: 80ch; scroll-margin-top: var(--s4); }
+.rule h3 { margin: 0 0 var(--s2); font-size: 18px; }
+.rule p { margin: 0 0 var(--s2); }
+.rule p:last-child { margin-bottom: 0; }
+.rule-id { color: var(--muted); font-weight: 600; margin-right: var(--s2); }
+.rule:target { border-color: var(--focus); box-shadow: 0 0 0 2px var(--focus); }
 
 /* Release to taxpayer */
 .pill-released { color: var(--done); background: var(--done-bg); }

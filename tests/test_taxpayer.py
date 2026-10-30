@@ -159,13 +159,14 @@ def test_the_form_appears_only_after_a_volunteer_releases_it(apps):
     assert public.get(f"/r/{session_id}/form.pdf").status_code == 404
     assert public.get(f"/r/{session_id}/form.html").status_code == 404
 
-    refused = staff.post(f"/sessions/{session_id}/release", data={"released_by": "Dana"}, follow_redirects=True)
+    refused = staff.post(f"/returns/{session_id}/release", data={"released_by": "Dana"}, follow_redirects=True)
     assert "Tick the box" in refused.get_data(as_text=True)
-    staff.post(f"/sessions/{session_id}/release", data={"checked": "yes", "released_by": "Dana"})
+    staff.post(f"/returns/{session_id}/release", data={"checked": "yes", "released_by": "Dana"})
 
     assert "View my form" in public.get(f"/r/{session_id}").get_data(as_text=True)
     assert public.get(f"/r/{session_id}/form.pdf").status_code == 200
-    assert "Released by Dana" in staff.get(f"/sessions/{session_id}").get_data(as_text=True)
+    assert "Released by Dana" in staff.get(f"/returns/{session_id}").get_data(as_text=True)
+    assert staff.get(f"/returns/{session_id[-6:].upper()}").status_code == 200  # the short Ref. finds it too
 
 
 def test_a_draft_can_be_released_only_once_and_only_with_a_name(apps, db):
