@@ -13,6 +13,7 @@
     <div class="wrap">
       <a class="brand" href="{{ url_for('home') }}">Kushim SilverFile</a>
       <span class="tagline">Free help with your 2025 tax return</span>
+      {% if grader_enabled %}<a class="grader-link" href="{{ url_for('grader_home') }}">Grader's dashboard</a>{% endif %}
     </div>
   </header>
   <main class="wrap">

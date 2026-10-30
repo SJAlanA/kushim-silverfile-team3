@@ -21,6 +21,7 @@ SilverFile is a classroom build (Cornell ENMGT 5405, Assignment 7). It drafts Fo
 
 ## Out of scope for a classroom build
 
+- **Grader's dashboard.** `/grader` on the taxpayer page lets anyone who can reach port 8001 start returns from the eval cases and see their expected values. It holds only the case files' fake test data and never resolves a HITL event or releases a draft itself, but a real deployment would turn it off with `GRADER_DASHBOARD=0`.
 - **Taxpayer accounts.** The taxpayer page's private link is the only key; a production version needs real sign-in and a way to recover a lost link. The page binds to `127.0.0.1` by default (`TAXPAYER_HOST`); Docker publishes port 8001.
 - **Dashboard login.** The dashboard has no authentication. A production version needs real accounts for Kushim staff. A simple shared password read from an environment variable would be the minimum for a demo shared beyond one machine. **This is not production software.**
 - **Encryption at rest.** The checkpoint database (`silverfile_checkpoints.sqlite`) and `outputs/` are plain files. They hold fake 900-series test data only; real data would need encrypted storage and a retention policy.

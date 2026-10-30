@@ -149,6 +149,17 @@ Open http://localhost:8001 and click **Start my return**. Run the staff dashboar
 - **A private link per return** (`/r/web-…`, 128 random bits). There's no login and no list of returns; anyone with the link can continue that return, so the page says to keep it safe.
 - **The form only after release.** When the questions end, the taxpayer sees "a volunteer is checking your draft". *View my form* and *Download PDF* appear only after a volunteer clicks **Release to taxpayer** in the dashboard. The taxpayer never sees the staff-facing reason for a HITL event, only that a volunteer is taking a look.
 
+### Grader's dashboard
+
+http://localhost:8001/grader (or **Grader's dashboard** in the taxpayer page's header) lists eval cases 1 and 2 and the 13 negative cases from `evals/cases.json`.
+
+1. Click **Fill** on a case. SilverFile starts a return on the taxpayer page and answers every question from the case file, the same way `run.py --case` does.
+2. The replay **stops at every HITL event and never resolves it**. The case page shows the reason, what the case file's volunteer decided (as a hint), and a link straight to that decision in the staff dashboard. Make the decision there, come back and click **Continue filling**.
+3. A finished draft still needs **Release to taxpayer** in the staff dashboard; then *Taxpayer view* shows the form.
+4. **Expected and actual** compares the run with the case file: HITL conditions raised, how the run ended, and, for the two demo cases, every expected line.
+
+Run both pages on the same checkpoint database (Docker does this). Set `STAFF_DASHBOARD_URL` if the staff dashboard isn't at http://localhost:8000, and `GRADER_DASHBOARD=0` to switch the grader's dashboard off.
+
 ## Run with Docker
 
 ```bash

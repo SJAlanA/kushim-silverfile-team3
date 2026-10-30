@@ -26,9 +26,12 @@ from langgraph.types import Command
 from PIL import Image, UnidentifiedImageError
 
 from src.agents.intake_questions import BY_ID, GLOSSARY, SUB_KINDS, SUB_TEXT
+from src.dashboard import CONDITION_LABELS, DECISION_LABELS, label, reference
+from src.dashboard.views import readable
 from src.graph import build_graph
 from src.memory import get_checkpointer
 from src.release import is_released
+from src.taxpayer import grader
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # per request
 UPLOAD_TYPES = {"jpeg": ".jpg", "png": ".png"}
@@ -136,6 +139,53 @@ def create_app(db_path: str | None = None, upload_dir: str | None = None) -> Fla
         graph.invoke(Command(resume=json.dumps(saved)), config(session_id))
         return redirect(url_for("tax_return", session_id=session_id))
 
+    # --- Grader's dashboard -----------------------------------------------------------------
+    staff = os.getenv("STAFF_DASHBOARD_URL", "http://localhost:8000").rstrip("/")
+    app.jinja_env.globals.update(grader_enabled=grader_enabled(), staff=staff,
+                                 condition_label=lambda c: CONDITION_LABELS.get(c, c),
+                                 decision_label=lambda d: DECISION_LABELS.get(d, d),
+                                 answer_label=label, answer_value=lambda qid, v: readable(v, qid))
+    app.jinja_env.filters["reference"] = reference
+    app.jinja_env.filters["condition_label"] = app.jinja_env.globals["condition_label"]
+
+    def case_or_404(case_id: str) -> dict:
+        if not grader_enabled() or case_id not in grader.catalog():
+            abort(404)
+        return grader.catalog()[case_id]
+
+    @app.get("/grader")
+    def grader_home():
+        if not grader_enabled():
+            abort(404)
+        cases = list(grader.catalog().values())
+        return render_template("grader.html", demo=[c for c in cases if c["group"] == "demo"],
+                               negative=[c for c in cases if c["group"] == "negative"])
+
+    @app.post("/grader/cases/<case_id>")
+    def grader_start(case_id: str):
+        entry = case_or_404(case_id)
+        session_id = f"web-{secrets.token_hex(16)}"
+        graph.invoke({"session_id": session_id}, config(session_id))
+        grader.replay(graph, session_id, entry["case"])
+        return redirect(url_for("grader_run", case_id=case_id, session_id=session_id))
+
+    @app.get("/grader/cases/<case_id>/<session_id>")
+    def grader_run(case_id: str, session_id: str):
+        entry, values = case_or_404(case_id), state_of(session_id)
+        payload = pending(session_id)
+        event = payload["event"] if payload and payload.get("type") == "hitl" else None
+        return render_template("grader_run.html", entry=entry, session_id=session_id, s=values, event=event,
+                               asking=payload if payload and payload.get("type") == "intake_question" else None,
+                               hint=grader.expected_resolution(entry["case"], event["condition"]) if event else None,
+                               compare=grader.comparison(entry["case"], values), released=is_released(values))
+
+    @app.post("/grader/cases/<case_id>/<session_id>/continue")
+    def grader_continue(case_id: str, session_id: str):
+        entry = case_or_404(case_id)
+        state_of(session_id)
+        grader.replay(graph, session_id, entry["case"])
+        return redirect(url_for("grader_run", case_id=case_id, session_id=session_id))
+
     @app.get("/r/<session_id>/form.<kind>")
     def form(session_id: str, kind: str):
         values = state_of(session_id)
@@ -146,6 +196,11 @@ def create_app(db_path: str | None = None, upload_dir: str | None = None) -> Fla
                          download_name=f"Form-1040-SR-draft.{kind}")
 
     return app
+
+
+def grader_enabled() -> bool:
+    """The grader's dashboard is on unless GRADER_DASHBOARD=0. A real deployment would turn it off."""
+    return os.getenv("GRADER_DASHBOARD", "1") != "0"
 
 
 # ---------------------------------------------------------------------------
