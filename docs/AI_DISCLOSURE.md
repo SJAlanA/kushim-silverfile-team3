@@ -2,13 +2,6 @@
 
 **Sahai Jordi Alan Anbu Kulandainathan (sa2525)**- For my role, *Review / Audit* (security), and as the repository owner who reviewed and merged the team's pull requests, I used Claude as an AI coding assistant, as described in the team’s AI statement. Claude did the coding for my area, helped me review the team's pull requests, helped me work through design choices, and helped me set the design principles the whole team followed. The final decisions and the design were mine: what to build, which approach to take, which changes to accept or send back, and when work was ready to merge. I reviewed and tested what was generated, and I take responsibility for the final work in my area and for what was merged into the repository.
 
-**2**
-
-**3**
-
-**4**
-
 **Ishitha Vemula**- For my role, *Eligibility & Rules* (guardrails and ethics), I used Claude as an AI coding assistant, as described in the team’s AI statement. I defined the requirements for my area from the assignment brief and directed the design: eligibility is decided by a table that cites rules from our policy document, and unclear or risky cases are escalated to a volunteer instead of being guessed. I reviewed the code and notes that were generated, tested them with unit tests and with eval cases covering each escalation condition, and revised them where they did not meet the brief. I take responsibility for the final work in my area.
 
-**5**
 
