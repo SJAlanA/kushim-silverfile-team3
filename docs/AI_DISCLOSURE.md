@@ -4,9 +4,6 @@
 
 **Parth Chandak**- For my role, *Computation* (MLOps/DevOps), I used Claude through Claude Code as an AI coding assistant, as described in the team’s AI statement. I gave it the assignment brief, the team's shared contract and a written task prompt that set the rules for my area: the Computation agent may not do any arithmetic itself, every dollar must be a whole number with a record of where it came from, everything must run offline, and work is committed in small steps. Claude wrote the tax_math MCP server, the Computation agent, the tests, the Docker, CI and Makefile setup, and a first draft of my design notes. Its tax figures were not taken on trust: the 2025 tax brackets and qualified-dividend thresholds were checked against the IRS source (Rev. Proc. 2024-40), and the results were tested against hand-worked values, including every row of the standard deduction chart, each Social Security tier and the full eval case 1 return. To show the agent does no math itself, a test swaps the calculator for one that returns made-up marker numbers and checks that every line on the form carries one. Claude's environment could not install packages or run Docker, so the full test suite and the Docker image were first confirmed by the GitHub CI checks rather than on my machine. I also used Claude afterwards to explain the system to me and to prepare for the class discussion. I take responsibility for the final work in my area.
 
-**3**
-**4**
-
 **Ishitha Vemula**- For my role, *Eligibility & Rules* (guardrails and ethics), I used Claude as an AI coding assistant, as described in the team’s AI statement. I defined the requirements for my area from the assignment brief and directed the design: eligibility is decided by a table that cites rules from our policy document, and unclear or risky cases are escalated to a volunteer instead of being guessed. I reviewed the code and notes that were generated, tested them with unit tests and with eval cases covering each escalation condition, and revised them where they did not meet the brief. I take responsibility for the final work in my area.
-**5**
+
 
