@@ -12,6 +12,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     SILVERFILE_OFFLINE=1 \
     DASHBOARD_HOST=0.0.0.0 \
+    TAXPAYER_HOST=0.0.0.0 \
+    UPLOAD_DIR=/app/state/uploads \
     CHECKPOINT_DB=/app/state/silverfile_checkpoints.sqlite \
     SILVERFILE_TRACE_DIR=/app/traces
 
