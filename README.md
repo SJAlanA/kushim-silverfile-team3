@@ -26,7 +26,7 @@ docker compose build          # first time, and after every git pull
 docker compose up             # starts the staff dashboard (8000) and the taxpayer page (8001)
 ```
 
-**With the submitted image file** (`silverfile-image.tar.gz`, no repository needed): see [Run the submitted image file](#run-the-submitted-image-file-no-repository-needed).
+**With the submitted image file** (`silverfile-image.tar.gz`, from the submission or the [v1.0 release](https://github.com/SJAlanA/kushim-silverfile-team3/releases/tag/v1.0); no repository needed): see [Run the submitted image file](#run-the-submitted-image-file-no-repository-needed).
 
 **With Python** (after [Setup](#setup-local)), in two terminals:
 
@@ -206,7 +206,13 @@ The image runs offline by default and includes Tesseract. All services share one
 
 ### Run the submitted image file (no repository needed)
 
-The submission includes the image as `silverfile-image.tar.gz`, built for Intel/AMD (`linux/amd64`). It runs on any machine with Docker, including Apple-chip Macs, where Docker prints a platform warning and runs it through emulation, a little slower.
+The image is `silverfile-image.tar.gz`, uploaded with the submission and also attached to the [v1.0 release](https://github.com/SJAlanA/kushim-silverfile-team3/releases/tag/v1.0) on GitHub (with a `.sha256` checksum file). It's built for Intel/AMD (`linux/amd64`). It runs on any machine with Docker, including Apple-chip Macs, where Docker prints a platform warning and runs it through emulation, a little slower.
+
+If you have access to the repository, you can download it from the release with the GitHub CLI:
+
+```bash
+gh release download v1.0 --repo SJAlanA/kushim-silverfile-team3 --pattern 'silverfile-image.tar.gz*'
+```
 
 Load the image (once):
 
