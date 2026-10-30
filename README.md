@@ -9,6 +9,35 @@ Each finished session writes to `outputs/<session_id>/`:
 - `form_1040sr.pdf`: the official IRS 2025 Form 1040-SR, filled in and watermarked "CLASSROOM DRAFT - DO NOT FILE".
 - `audit.json`: every line with provenance, the cited rules, volunteer decisions and review rounds.
 
+## Quick start
+
+SilverFile has three web pages, and you can run them with Docker or with Python. Either way they share one checkpoint database, so a return started on one page shows up on the others.
+
+| Page | Address | For |
+| --- | --- | --- |
+| Staff dashboard | http://localhost:8000 | Kushim volunteers: resolve HITL events, check and release drafts |
+| Taxpayer page | http://localhost:8001 | Taxpayers: answer the questions, upload a W-2, get the released form |
+| Grader's dashboard | http://localhost:8001/grader | Graders: fill an eval case in one click, then do the HITL steps by hand |
+
+**With Docker** (no Python needed):
+
+```bash
+docker compose build          # first time, and after every git pull
+docker compose up             # starts the staff dashboard (8000) and the taxpayer page (8001)
+```
+
+**With Python** (after [Setup](#setup-local)), in two terminals:
+
+```bash
+python run.py --dashboard     # or: make dashboard
+```
+
+```bash
+python run.py --taxpayer      # or: make taxpayer
+```
+
+Then open http://localhost:8001/grader and click **Fill eval case 2** for the quickest tour of a human-in-the-loop run. The terminal ways of running each case are below.
+
 ## Team roles
 
 | Focus area | Team member assigned | Agent owned |
@@ -45,7 +74,7 @@ pytest                             # all tests pass offline
 
 ## Run the eval cases
 
-Run from the repository root, because case files use relative document paths.
+In a browser, the [grader's dashboard](#graders-dashboard) runs any of these with one click. From the terminal, run from the repository root, because case files use relative document paths.
 
 **Eval case 1: a clean return, no human needed.** Single, born 1958, one W-2 image, Social Security, interest and dividends.
 
@@ -163,7 +192,7 @@ Run both pages on the same checkpoint database (Docker does this). Set `STAFF_DA
 ## Run with Docker
 
 ```bash
-docker compose up                                                         # dashboard :8000, taxpayer page :8001
+docker compose up                                                         # staff dashboard :8000, taxpayer page and grader's dashboard :8001
 docker compose run --rm app python run.py --case demo/eval_case_1/case.json
 docker compose run --rm app python run.py --case demo/eval_case_2/case.json
 docker compose run --rm app python run.py --interactive
@@ -171,7 +200,7 @@ docker compose run --rm app python run.py --interactive
 
 **After pulling new code, rebuild the image** with `docker compose build` (or `docker compose up --build`). `docker compose run` reuses an existing image, so without a rebuild it runs the old code.
 
-The image runs offline by default and includes Tesseract. Both services share one checkpoint database volume, so a run paused on a HITL event can be resolved in the dashboard container. Forms are written to `./outputs` and traces to `./traces` on your machine. To use Claude in Docker, put the key in `.env` and run with `SILVERFILE_OFFLINE=0 docker compose up`. Makefile shortcuts: `make docker-build`, `make docker-up`, `make docker-demo1`, `make docker-test`.
+The image runs offline by default and includes Tesseract. All services share one checkpoint database volume, so a run paused on a HITL event (from the taxpayer page, the grader's dashboard or `docker compose run`) can be resolved in the dashboard container. Taxpayers' uploaded photos stay in that private volume. Forms are written to `./outputs` and traces to `./traces` on your machine. To use Claude in Docker, put the key in `.env` and run with `SILVERFILE_OFFLINE=0 docker compose up`. Makefile shortcuts: `make docker-build`, `make docker-up`, `make docker-demo1`, `make docker-test`.
 
 ## Context-window measurement
 
