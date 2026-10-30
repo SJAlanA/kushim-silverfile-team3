@@ -246,6 +246,45 @@ kushim-silverfile-team3/
 └── SECURITY.md              # threat model and controls
 ```
 
+## System overview
+
+Three web pages and the terminal all drive the same LangGraph graph and share one checkpoint database, so a return started in one place can be continued, decided or released in another. Every dollar is computed by the tax_math MCP server. Claude is used only when an API key is set; offline, every agent uses its deterministic path. The [orchestration diagram](#orchestration-diagram) below opens up the graph.
+
+```mermaid
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	taxpayer([Taxpayer])
+	grader([Grader])
+	volunteer([Kushim volunteer])
+	tp_page(Taxpayer page<br/>:8001)
+	grader_page(Grader's dashboard<br/>:8001/grader)
+	staff_page(Staff dashboard<br/>:8000)
+	cli(run.py<br/>terminal)
+	graph_core(SilverFile graph<br/>orchestrator + six agents)
+	tax_math(tax_math MCP server<br/>all arithmetic)
+	checkpoint[(Checkpoint database<br/>every step saved)]
+	outputs[(outputs/<br/>form HTML, PDF, audit.json)]
+	claude(Claude API<br/>optional, online only)
+	taxpayer --> tp_page;
+	grader --> grader_page;
+	volunteer --> staff_page;
+	tp_page -- answers, W-2 photos --> graph_core;
+	grader_page -- replays an eval case --> graph_core;
+	staff_page -- decisions, release --> graph_core;
+	cli --> graph_core;
+	graph_core --> tax_math;
+	graph_core --> checkpoint;
+	graph_core --> outputs;
+	graph_core -.-> claude;
+	classDef default fill:#f2f0ff,stroke:#7c6fd8,color:#1f1a3d,line-height:1.2
+	classDef person fill:#bfb6fc,stroke:#7c6fd8,color:#1f1a3d
+	class taxpayer,grader,volunteer person
+```
+
 ## Orchestration diagram
 
 Every agent returns to the orchestrator, which picks the next node from state. Dotted edges are conditional. `extract_dispatch` fans out one `extract_one` branch per document, and they all join at `extract_aggregate`. Design notes: [docs/notes/task_division_and_management.md](docs/notes/task_division_and_management.md). Rendered image: [docs/graph.png](docs/graph.png).
