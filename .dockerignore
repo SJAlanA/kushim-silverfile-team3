@@ -9,7 +9,9 @@ venv
 *.sqlite
 *.sqlite3
 *.db
+*.sqlite-*
 outputs
+uploads
 traces/*.jsonl
 !traces/sample_eval_case_1.jsonl
 .DS_Store

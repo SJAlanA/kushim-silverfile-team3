@@ -1,6 +1,6 @@
 # SilverFile: everything in one image. Runs offline (no API key) by default.
 #
-#   docker compose up                    # staff dashboard on http://localhost:8000
+#   docker compose up                    # staff dashboard on :8000, taxpayer page and grader's dashboard on :8001
 #   docker compose run --rm app python run.py --case demo/eval_case_1/case.json
 #
 # See docs/notes/mlops_devops.md for the design.
@@ -29,5 +29,5 @@ RUN if [ -f requirements.lock ]; then pip install -r requirements.lock; else pip
 COPY . .
 RUN mkdir -p /app/outputs /app/state /app/traces
 
-EXPOSE 8000
+EXPOSE 8000 8001
 CMD ["python", "run.py", "--dashboard"]
