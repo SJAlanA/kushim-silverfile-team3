@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  {% block head %}{% endblock %}
+  <title>{% block title %}Your 2025 tax return{% endblock %} · Kushim SilverFile</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='taxpayer.css') }}">
+</head>
+<body>
+  <header class="masthead">
+    <div class="wrap">
+      <a class="brand" href="{{ url_for('home') }}">Kushim SilverFile</a>
+      <span class="tagline">Free help with your 2025 tax return</span>
+      {% if grader_enabled %}<a class="grader-link" href="{{ url_for('grader_home') }}">Grader's dashboard</a>{% endif %}
+    </div>
+  </header>
+  <main class="wrap">
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+      <p class="notice notice-{{ category }}" role="alert">{{ message }}</p>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="wrap footer">
+    <p>SilverFile prepares a draft for a Kushim volunteer to check. It never files your return and doesn't give tax advice.
+       This is a practice system: please use test details only, never your real Social Security number.</p>
+  </footer>
+</body>
+</html>

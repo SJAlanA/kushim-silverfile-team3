@@ -31,6 +31,7 @@ from src.dashboard import policy
 from src.dashboard.views import documents, key_figures, line_sections, outcome, readable, review_summary
 from src.graph import SEND_BACK, build_graph, validate_decision
 from src.memory import get_checkpointer, list_sessions
+from src.release import can_release, release_draft
 
 GROUPS = (("needs_human", "Needs a volunteer"), ("in_progress", "In progress"), ("completed", "Draft ready"))
 # What each home-page group means, shown in the info tip beside its heading, and what it says when empty.
@@ -41,8 +42,8 @@ GROUP_INFO = {
     "in_progress": ("SilverFile is still preparing these returns: the taxpayer is answering questions, or their "
                     "documents are being read and the numbers worked out. Nothing is needed from you yet.",
                     "No returns are being prepared at the moment. New ones will appear here as they start."),
-    "completed": ("These draft returns are finished and have passed SilverFile's checks. A volunteer goes through "
-                  "the draft with the taxpayer before anything is filed.",
+    "completed": ("These draft returns are finished and have passed SilverFile's checks. A volunteer checks each "
+                  "draft and releases it; the taxpayer can only see and download the form after that.",
                   "Finished draft returns will appear here."),
 }
 # Why a return is waiting, in plain words (contract HITL conditions).
@@ -126,6 +127,7 @@ def create_app(db_path: str | None = None) -> Flask:
         session_id = find(ref)
         values = state_of(session_id)
         return render_template("session.html", session_id=session_id, s=values,
+                               can_release=can_release(values),
                                answers=masked_answers(values.get("intake", {})),
                                sections=line_sections(values), outcome=outcome(values),
                                figures=key_figures(values), documents=documents(values),
@@ -159,6 +161,22 @@ def create_app(db_path: str | None = None) -> Flask:
         graph.invoke(Command(resume=payload), _config(session_id))
         flash(f"Saved. {DECISION_DONE[payload['decision']]} by {payload['resolved_by']}.", "ok")
         return redirect(url_for("session", ref=reference(session_id)))
+
+    @app.post("/returns/<ref>/release")
+    def release(ref: str):
+        session_id = find(ref)
+        state_of(session_id)
+        back = url_for("session", ref=reference(session_id))
+        if request.form.get("checked") != "yes":
+            flash("Tick the box to confirm you have checked the draft.", "error")
+            return redirect(back)
+        try:
+            release_draft(graph, session_id, request.form.get("released_by", ""), request.form.get("note", ""))
+        except ValueError as error:
+            flash(str(error), "error")
+            return redirect(back)
+        flash("Released. The taxpayer can now see and download their draft form.", "ok")
+        return redirect(back)
 
     @app.get("/returns/<ref>/files/<kind>")
     def output(ref: str, kind: str):
@@ -370,8 +388,9 @@ def full_name(intake: dict) -> str:
 
 
 def reference(session_id: str) -> str:
-    """A short reference staff can read out: 'eval_case_1-3d7db7' -> '3D7DB7'."""
-    return session_id.rsplit("-", 1)[-1].upper()
+    """A short reference staff can read out: 'eval_case_1-3d7db7' -> '3D7DB7'. A taxpayer-page id
+    ('web-' + 32 hex characters) is cut to its last 6, so it stays short enough to read out."""
+    return session_id.rsplit("-", 1)[-1][-6:].upper()
 
 
 def format_time(value: str) -> str:

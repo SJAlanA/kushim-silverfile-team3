@@ -18,6 +18,7 @@ Contract additions (all optional, nothing renamed):
 - HITLEvent: `details`, `raised_at` (already written by src/hitl.py).
 - SilverFileState: `intake_meta`, `current_item`, `context_strategy` (added by Agent memory).
 - SilverFileState: `routing` (added by Task division and management; orchestrator bookkeeping).
+- SilverFileState: `release` (a volunteer's sign-off; written only by src/release.py).
 """
 from __future__ import annotations
 
@@ -249,3 +250,5 @@ class SilverFileState(TypedDict, total=False):
     context_strategy: bool   # False disables selective recall (run.py --no-context-strategy)
     # Optional addition by Task division and management (written by orchestrator and human_review only):
     routing: dict            # {"inputs_seen": {agent: hash}, "handoff_cursor": int, "trail": [[agent, hash]]}
+    # Optional addition: a volunteer's sign-off. The taxpayer page shows the form only once this is set.
+    release: dict            # {"released_by", "released_at", "note"}

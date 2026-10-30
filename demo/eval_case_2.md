@@ -4,6 +4,8 @@ A woman born in 1957 whose husband died in August 2025. She has one W-2 (read fr
 
 Case file: [`eval_case_2/case.json`](eval_case_2/case.json). Expected result: **exactly one HITL event, resolved, then a finished return.**
 
+> **Quickest way in a browser:** run `docker compose up` (or `python run.py --dashboard` and `python run.py --taxpayer`), open http://localhost:8001/grader and click **Fill eval case 2**. The page fills in the answers for you, stops when the volunteer is needed, and links you to that decision in the staff dashboard. The steps below do the same from the terminal.
+
 ## The taxpayer
 
 | Question | Answer |

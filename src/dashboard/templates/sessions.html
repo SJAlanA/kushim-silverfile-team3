@@ -23,11 +23,14 @@
       {% for row in rows %}
         <tr>
           <td>{{ row.taxpayer or "Name not given yet" }}<span class="hint">Ref. {{ row.session_id|reference }}</span></td>
-          <td>{% with status=row.status %}{% include "_pill.html" %}{% endwith %}</td>
+          <td>{% if key == "completed" and row.released %}<span class="pill pill-released">Released to taxpayer</span>
+              {% elif key == "completed" and row.status == "complete" %}<span class="pill pill-complete">Ready to check</span>
+              {% else %}{% with status=row.status %}{% include "_pill.html" %}{% endwith %}{% endif %}</td>
           <td data-label="Updated">{{ row.updated_at|when }}</td>
           <td data-label="Why it's waiting" class="{{ 'reason' if key == 'needs_human' else 'spacer' }}">{% if key == "needs_human" %}{{ row.reasons|join("; ") }}{% endif %}</td>
           <td class="end">
             {% if key == "needs_human" %}<a class="button" href="{{ url_for('session', ref=row.session_id|reference) }}">Review</a>
+            {% elif key == "completed" and row.status == "complete" and not row.released %}<a class="button" href="{{ url_for('session', ref=row.session_id|reference) }}#h-release">Check and release</a>
             {% elif key == "completed" %}<a href="{{ url_for('session', ref=row.session_id|reference) }}">View draft</a>
             {% else %}<a href="{{ url_for('session', ref=row.session_id|reference) }}">View progress</a>{% endif %}
           </td>

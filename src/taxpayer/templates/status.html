@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block head %}{% if stage in ("working", "volunteer_checking", "awaiting_release") %}<meta http-equiv="refresh" content="20">{% endif %}{% endblock %}
+{% block title %}Your return{% endblock %}
+{% block content %}
+{% if stage == "released" %}
+  <h1>Your draft is ready{% if name %}, {{ name }}{% endif %}</h1>
+  <p class="lead">A Kushim volunteer has checked your draft Form 1040-SR. You can look at it now and download a copy.</p>
+  <div class="choices">
+    <a class="button primary" href="{{ url_for('form', session_id=session_id, kind='html') }}">View my form</a>
+    <a class="button secondary" href="{{ url_for('form', session_id=session_id, kind='pdf') }}">Download PDF</a>
+  </div>
+  <p>Tap any amount on the form to see where it came from. This is a draft: nothing has been filed.
+     Your volunteer will go through it with you before anything is sent to the IRS.</p>
+{% elif stage == "awaiting_release" %}
+  <h1>Thank you{% if name %}, {{ name }}{% endif %}. Your answers are complete.</h1>
+  <p class="lead">SilverFile has prepared your draft. A Kushim volunteer is now checking it.</p>
+  <p>Your form will appear on this page as soon as they have. You can close this page and come back to your private link later.</p>
+{% elif stage == "volunteer_checking" %}
+  <h1>A volunteer is taking a look</h1>
+  <p class="lead">Something in your return needs a person to check before we carry on. This is normal and nothing is wrong.</p>
+  <p>This page updates by itself. You can also close it and come back to your private link later.</p>
+{% elif stage == "volunteer_will_contact" %}
+  <h1>A volunteer will help you with this return</h1>
+  <p class="lead">Your return needs some things SilverFile can't prepare on its own, so a Kushim volunteer will finish it with you.</p>
+  <p>Your answers are saved, so you won't need to give them again.</p>
+{% else %}
+  <h1>Working on your return</h1>
+  <p class="lead">SilverFile is reading your forms and working out the numbers. This page updates by itself.</p>
+{% endif %}
+{% endblock %}

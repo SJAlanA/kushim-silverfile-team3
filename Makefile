@@ -6,7 +6,7 @@ PY     := $(if $(wildcard $(VENV)/bin/python),$(VENV)/bin/python,python3)
 REQS   := $(if $(wildcard requirements.lock),requirements.lock,requirements.txt)
 OFFLINE := SILVERFILE_OFFLINE=1
 
-.PHONY: help install lock test test-fast demo1 demo2 dashboard sample-trace docker-build docker-up docker-demo1 docker-test clean
+.PHONY: help install lock test test-fast demo1 demo2 dashboard taxpayer sample-trace docker-build docker-up docker-demo1 docker-test clean
 
 help:  ## List targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -35,6 +35,9 @@ demo2:  ## Eval case 2: raises a HITL event, resolved from the case file or the 
 dashboard:  ## Staff dashboard on http://localhost:8000
 	$(OFFLINE) $(PY) run.py --dashboard
 
+taxpayer:  ## Taxpayer page on http://localhost:8001
+	$(OFFLINE) $(PY) run.py --taxpayer
+
 sample-trace: demo1  ## Run eval case 1, then keep its trace as traces/sample_eval_case_1.jsonl
 	cp "$$(ls -t traces/eval_case_1-*.jsonl | head -1)" traces/sample_eval_case_1.jsonl
 	@echo "Updated traces/sample_eval_case_1.jsonl"
@@ -42,8 +45,8 @@ sample-trace: demo1  ## Run eval case 1, then keep its trace as traces/sample_ev
 docker-build:  ## Build the image
 	docker compose build
 
-docker-up:  ## Start the dashboard in Docker on http://localhost:8000
-	docker compose up dashboard
+docker-up:  ## Start the dashboard (8000) and taxpayer page (8001) in Docker
+	docker compose up dashboard taxpayer
 
 docker-demo1:  ## Run eval case 1 in Docker (writes ./outputs)
 	docker compose run --rm app python run.py --case demo/eval_case_1/case.json

@@ -4,6 +4,8 @@ A single filer born in 1958 with one W-2 (read from an image), Social Security, 
 
 Case file: [`eval_case_1/case.json`](eval_case_1/case.json)
 
+> **Quickest way in a browser:** run `docker compose up` (or `python run.py --dashboard` and `python run.py --taxpayer`), open http://localhost:8001/grader and click **Fill eval case 1**. The page fills in the answers for you. Then release the draft in the staff dashboard to see the form in the taxpayer view. The steps below do the same from the terminal.
+
 ## The taxpayer
 
 | Question | Answer |

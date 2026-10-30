@@ -5,6 +5,7 @@
     python run.py --session <id>                        # resume a saved session
     python run.py --batch [--no-context-strategy]       # context-window measurement
     python run.py --dashboard                           # staff dashboard on http://localhost:8000
+    python run.py --taxpayer                            # taxpayer page on http://localhost:8001
 """
 from __future__ import annotations
 
@@ -32,6 +33,7 @@ def main() -> None:
     parser.add_argument("--batch", action="store_true", help="Run the batch scenario")
     parser.add_argument("--no-context-strategy", action="store_true", help="Disable the context-window strategy")
     parser.add_argument("--dashboard", action="store_true", help="Start the staff dashboard")
+    parser.add_argument("--taxpayer", action="store_true", help="Start the taxpayer page")
     args = parser.parse_args()
     strategy = not args.no_context_strategy
     load_dotenv()  # ANTHROPIC_API_KEY etc. from .env; variables already set in the shell win
@@ -44,6 +46,10 @@ def main() -> None:
         from src.dashboard import create_app
 
         create_app().run(host=os.getenv("DASHBOARD_HOST", "127.0.0.1"), port=8000)
+    elif args.taxpayer:
+        from src.taxpayer import create_app as create_taxpayer_app
+
+        create_taxpayer_app().run(host=os.getenv("TAXPAYER_HOST", "127.0.0.1"), port=8001)
     elif args.case:
         run_case(Path(args.case), strategy)
     elif args.interactive or args.session:

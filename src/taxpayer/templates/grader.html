@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Grader's dashboard{% endblock %}
+{% block content %}
+<div class="grader">
+<h1>Grader's dashboard</h1>
+<p class="lead">Pick a case and SilverFile fills in the taxpayer page for you, answering every question from the case file.
+   It stops whenever a volunteer is needed, so you can make that decision yourself in the
+   <a href="{{ staff }}/needs-a-volunteer" target="_blank" rel="noopener">staff dashboard</a>.</p>
+
+<ol class="how">
+  <li><strong>Fill a case.</strong> SilverFile starts a new return and answers the questions from the case file.</li>
+  <li><strong>Resolve any volunteer step</strong> in the staff dashboard (port 8000), then come back and click <em>Continue filling</em>.</li>
+  <li><strong>Release the finished draft</strong> in the staff dashboard. Only then does the taxpayer view show the form.</li>
+  <li><strong>Compare</strong> the result with what the case file expects.</li>
+</ol>
+
+<h2>Eval cases</h2>
+<div class="cases">
+  {% for c in demo %}
+  <article class="case">
+    <h3>{{ c.title }}</h3>
+    <p>{{ c.description }}</p>
+    <form method="post" action="{{ url_for('grader_start', case_id=c.id) }}"><button type="submit" class="primary">Fill {{ c.title|lower }}</button></form>
+  </article>
+  {% endfor %}
+</div>
+
+<h2>Negative cases <span class="hint">({{ negative|length }}, from evals/cases.json)</span></h2>
+<p>Each one is eval case 1 with one thing changed so that SilverFile must stop and ask a volunteer.</p>
+<table class="case-list">
+  <thead><tr><th>Case</th><th>What it tests</th><th><span class="sr-only">Action</span></th></tr></thead>
+  <tbody>
+  {% for c in negative %}
+    <tr>
+      <td>{{ c.title }}</td>
+      <td>{{ c.description }}</td>
+      <td><form method="post" action="{{ url_for('grader_start', case_id=c.id) }}"><button type="submit" class="secondary small">Fill</button></form></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

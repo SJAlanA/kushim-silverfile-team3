@@ -1,0 +1,103 @@
+/* Kushim SilverFile, taxpayer page. Written for older adults: large type, high contrast,
+   one question per screen, big targets, nothing that moves. Same palette as the staff dashboard. */
+
+:root {
+  --paper: #f6f7f5; --surface: #ffffff; --ink: #1e2a2f; --muted: #4a585e; --rule: #cfd6d4;
+  --accent: #2f5d8a; --accent-dark: #234a70; --focus: #c26a00;
+  --ok: #2d6639; --ok-bg: #e3f0e4; --error: #7d2f2f; --error-bg: #f5e2e2;
+  --font: Seravek, "Gill Sans Nova", Ubuntu, Calibri, "DejaVu Sans", source-sans-pro, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 20px/1.55 var(--font); }
+.wrap { max-width: 680px; margin: 0 auto; padding: 0 20px; }
+a { color: var(--accent); text-underline-offset: 3px; }
+:focus-visible { outline: 4px solid var(--focus); outline-offset: 3px; }
+
+.masthead { background: var(--ink); color: #fff; padding: 16px 0; }
+.masthead .wrap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
+.brand { color: #fff; font-weight: 700; font-size: 22px; text-decoration: none; }
+.tagline { opacity: .85; font-size: 17px; }
+
+h1 { font-size: 32px; line-height: 1.25; margin: 40px 0 16px; }
+h2 { font-size: 24px; margin: 32px 0 8px; }
+.lead { font-size: 22px; margin: 0 0 24px; }
+.hint { color: var(--muted); font-size: 18px; font-weight: 400; }
+.steps { padding-left: 28px; margin: 0 0 32px; }
+.steps li { margin-bottom: 12px; }
+.aside { border-top: 1px solid var(--rule); margin-top: 40px; }
+
+/* Buttons: at least 56px tall, full text, never icons alone */
+button, .button {
+  display: inline-block; min-height: 56px; padding: 12px 28px; border-radius: 8px; border: 2px solid transparent;
+  font: inherit; font-weight: 700; text-align: center; text-decoration: none; cursor: pointer;
+}
+.primary { background: var(--accent); color: #fff; }
+.primary:hover { background: var(--accent-dark); }
+.secondary { background: var(--surface); color: var(--accent); border-color: var(--accent); }
+.secondary:hover { background: #eef3f8; }
+.link-button { min-height: 44px; padding: 8px 0; background: none; color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.choices { display: flex; flex-wrap: wrap; gap: 12px; margin: 8px 0 16px; }
+.choices .primary { min-width: 140px; }
+.choices.stacked { flex-direction: column; }
+.choices.stacked button { text-align: left; }
+
+/* The question card */
+.progress-label { display: block; color: var(--muted); font-size: 17px; margin-top: 32px; }
+progress { width: 100%; height: 10px; accent-color: var(--accent); }
+.card { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 8px 28px 16px; margin: 16px 0 24px; }
+.question { font-size: 28px; margin: 24px 0 20px; }
+.said { background: var(--ok-bg); color: var(--ok); border-radius: 8px; padding: 12px 18px; margin: 16px 0 0; }
+.answer { display: grid; gap: 12px; }
+.answer > button { justify-self: start; }
+input:not([type="file"]), select {
+  width: 100%; min-height: 56px; padding: 10px 14px; font: inherit; color: inherit;
+  background: var(--surface); border: 2px solid #8a9692; border-radius: 8px;
+}
+input[type="file"] { font-size: 18px; }
+.upload-row { display: grid; gap: 6px; border: 1px solid var(--rule); border-radius: 8px; padding: 12px 16px 16px; margin: 0; }
+.upload-row legend { font-weight: 700; padding: 0 6px; }
+.upload-row label { font-size: 18px; font-weight: 600; margin-top: 4px; }
+.helpers { display: flex; flex-wrap: wrap; gap: 4px 28px; border-top: 1px solid var(--rule); margin-top: 20px; padding-top: 8px; }
+.save-link { margin-top: 16px; font-size: 18px; }
+.save-link summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+.save-link .link { font-family: ui-monospace, Menlo, monospace; font-size: 16px; background: var(--surface);
+  border: 1px solid var(--rule); padding: 8px 12px; border-radius: 6px; overflow-wrap: anywhere; }
+
+.notice { border-radius: 8px; padding: 12px 18px; margin: 24px 0 0; }
+.notice-error { background: var(--error-bg); color: var(--error); }
+.notice-ok { background: var(--ok-bg); color: var(--ok); }
+.footer { color: var(--muted); font-size: 16px; border-top: 1px solid var(--rule); margin-top: 56px; padding-top: 8px; padding-bottom: 32px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+@media (max-width: 520px) {
+  body { font-size: 19px; }
+  h1 { font-size: 28px; }
+  .card { padding: 4px 18px 12px; }
+  .choices .primary, .choices .button { flex: 1; }
+}
+.note { background: #fff6e5; color: #6b3d00; border-left: 5px solid #c26a00; border-radius: 6px; padding: 12px 18px; margin: 20px 0 0; }
+.explain { margin: -8px 0 16px; }
+
+/* Grader's dashboard: a working tool for graders, so it can be wider and denser than the taxpayer pages */
+.grader-link { margin-left: auto; color: #fff; font-size: 17px; }
+.grader { font-size: 18px; }
+body:has(.grader) .wrap { max-width: 960px; }
+.grader h3 { margin: 0 0 6px; font-size: 21px; }
+.how { padding-left: 24px; margin: 0 0 8px; } .how li { margin-bottom: 6px; }
+.cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.case { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px; display: flex; flex-direction: column; }
+.case p { flex: 1; }
+.grader table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--rule); font-size: 17px; }
+.grader th, .grader td { text-align: left; vertical-align: top; padding: 10px 14px; border-bottom: 1px solid var(--rule); }
+.grader th { color: var(--muted); font-size: 15px; }
+.grader td.num { text-align: right; white-space: nowrap; }
+button.small { min-height: 44px; padding: 6px 18px; font-size: 17px; }
+.crumb { margin: 32px 0 0; font-size: 17px; } .crumb + h1 { margin-top: 8px; }
+.meta { color: var(--muted); font-size: 17px; }
+.next { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 4px 24px 20px; }
+.step-badge { display: inline-block; background: #fff6e5; color: #6b3d00; border-radius: 999px; padding: 2px 14px; font-weight: 700; font-size: 16px; }
+.step-done { background: var(--ok-bg); color: var(--ok); }
+.hint-box { background: var(--paper); border-left: 5px solid var(--accent); border-radius: 6px; padding: 4px 18px; margin: 12px 0; }
+.compare td.ok { color: var(--ok); font-weight: 700; } .compare td.bad { color: var(--error); font-weight: 700; }
+.compare td.pending { color: var(--muted); }
+@media (max-width: 640px) { .grader table { display: block; overflow-x: auto; } }

@@ -9,6 +9,35 @@ Each finished session writes to `outputs/<session_id>/`:
 - `form_1040sr.pdf`: the official IRS 2025 Form 1040-SR, filled in and watermarked "CLASSROOM DRAFT - DO NOT FILE".
 - `audit.json`: every line with provenance, the cited rules, volunteer decisions and review rounds.
 
+## Quick start
+
+SilverFile has three web pages, and you can run them with Docker or with Python. Either way they share one checkpoint database, so a return started on one page shows up on the others.
+
+| Page | Address | For |
+| --- | --- | --- |
+| Staff dashboard | http://localhost:8000 | Kushim volunteers: resolve HITL events, check and release drafts |
+| Taxpayer page | http://localhost:8001 | Taxpayers: answer the questions, upload a W-2, get the released form |
+| Grader's dashboard | http://localhost:8001/grader | Graders: fill an eval case in one click, then do the HITL steps by hand |
+
+**With Docker** (no Python needed):
+
+```bash
+docker compose build          # first time, and after every git pull
+docker compose up             # starts the staff dashboard (8000) and the taxpayer page (8001)
+```
+
+**With Python** (after [Setup](#setup-local)), in two terminals:
+
+```bash
+python run.py --dashboard     # or: make dashboard
+```
+
+```bash
+python run.py --taxpayer      # or: make taxpayer
+```
+
+Then open http://localhost:8001/grader and click **Fill eval case 2** for the quickest tour of a human-in-the-loop run. The terminal ways of running each case are below.
+
 ## Team roles
 
 | Focus area | Team member assigned | Agent owned |
@@ -45,7 +74,7 @@ pytest                             # all tests pass offline
 
 ## Run the eval cases
 
-Run from the repository root, because case files use relative document paths.
+In a browser, the [grader's dashboard](#graders-dashboard) runs any of these with one click. From the terminal, run from the repository root, because case files use relative document paths.
 
 **Eval case 1: a clean return, no human needed.** Single, born 1958, one W-2 image, Social Security, interest and dividends.
 
@@ -129,16 +158,41 @@ Open http://localhost:8000. The dashboard and any runs must use the same checkpo
 
   Then add a note and your name, and **Save decision**. A paused `--interactive` run carries on by itself.
 - **A return's page** (`/returns/<Ref.>`) leads with the refund or amount owed and the key figures, then every form line with a plain sentence on where its amount came from (*Show the calculation* opens the full working; lines that come to 0 are folded away). It also shows the documents read and the file each came from, the review result, the answers (SSNs masked, with an eye button to show the full test number), volunteer decisions, and links to the draft form, PDF and `audit.json`.
+- **Check and release.** Every finished draft waits for a volunteer, whether or not a HITL event was raised. On the return's page, tick that you've checked it, add your name and click **Release to taxpayer**. The release is recorded in state and in `audit.json`, and only then can the taxpayer see the form.
 - **Policy rules** (`/policy`) is the rule book. Every `policy.md#r-…` citation on the dashboard links to its rule.
 
 Old links (`/hitl`, `/sessions/<id>`) redirect to the new pages.
 
 The dashboard has no login and listens only on this machine (`127.0.0.1`). See [SECURITY.md](SECURITY.md).
 
+## The taxpayer page
+
+```bash
+python run.py --taxpayer                               # or: make taxpayer
+```
+
+Open http://localhost:8001 and click **Start my return**. Run the staff dashboard too, on the same checkpoint database, so a volunteer can resolve events and release the draft.
+
+- **One question per screen**, in large type, with Yes/No buttons, a date picker and *I'm not sure* / *Go back* on every question. It's the same Intake agent as `--interactive`, so the same rules apply (only 900-series test SSNs, nothing echoed back).
+- **Upload your forms.** At the documents question the page asks for a photo (JPG or PNG, up to 10 MB) of each form. Photos are checked to be real images and saved under random names in `UPLOAD_DIR` (default `uploads/`, git-ignored). W-2 photos are read by vision or OCR; other forms as photos can't be read yet, so they go to a volunteer.
+- **A private link per return** (`/r/web-…`, 128 random bits). There's no login and no list of returns; anyone with the link can continue that return, so the page says to keep it safe.
+- **The form only after release.** When the questions end, the taxpayer sees "a volunteer is checking your draft". *View my form* and *Download PDF* appear only after a volunteer clicks **Release to taxpayer** in the dashboard. The taxpayer never sees the staff-facing reason for a HITL event, only that a volunteer is taking a look.
+
+### Grader's dashboard
+
+http://localhost:8001/grader (or **Grader's dashboard** in the taxpayer page's header) lists eval cases 1 and 2 and the 13 negative cases from `evals/cases.json`.
+
+1. Click **Fill** on a case. SilverFile starts a return on the taxpayer page and answers every question from the case file, the same way `run.py --case` does.
+2. The replay **stops at every HITL event and never resolves it**. The case page shows the reason, what the case file's volunteer decided (as a hint), and a link straight to that decision in the staff dashboard. Make the decision there, come back and click **Continue filling**.
+3. A finished draft still needs **Release to taxpayer** in the staff dashboard; then *Taxpayer view* shows the form.
+4. **Expected and actual** compares the run with the case file: HITL conditions raised, how the run ended, and, for the two demo cases, every expected line.
+
+Run both pages on the same checkpoint database (Docker does this). Set `STAFF_DASHBOARD_URL` if the staff dashboard isn't at http://localhost:8000, and `GRADER_DASHBOARD=0` to switch the grader's dashboard off.
+
 ## Run with Docker
 
 ```bash
-docker compose up                                                         # dashboard on http://localhost:8000
+docker compose up                                                         # staff dashboard :8000, taxpayer page and grader's dashboard :8001
 docker compose run --rm app python run.py --case demo/eval_case_1/case.json
 docker compose run --rm app python run.py --case demo/eval_case_2/case.json
 docker compose run --rm app python run.py --interactive
@@ -146,7 +200,7 @@ docker compose run --rm app python run.py --interactive
 
 **After pulling new code, rebuild the image** with `docker compose build` (or `docker compose up --build`). `docker compose run` reuses an existing image, so without a rebuild it runs the old code.
 
-The image runs offline by default and includes Tesseract. Both services share one checkpoint database volume, so a run paused on a HITL event can be resolved in the dashboard container. Forms are written to `./outputs` and traces to `./traces` on your machine. To use Claude in Docker, put the key in `.env` and run with `SILVERFILE_OFFLINE=0 docker compose up`. Makefile shortcuts: `make docker-build`, `make docker-up`, `make docker-demo1`, `make docker-test`.
+The image runs offline by default and includes Tesseract. All services share one checkpoint database volume, so a run paused on a HITL event (from the taxpayer page, the grader's dashboard or `docker compose run`) can be resolved in the dashboard container. Taxpayers' uploaded photos stay in that private volume. Forms are written to `./outputs` and traces to `./traces` on your machine. To use Claude in Docker, put the key in `.env` and run with `SILVERFILE_OFFLINE=0 docker compose up`. Makefile shortcuts: `make docker-build`, `make docker-up`, `make docker-demo1`, `make docker-test`.
 
 ## Context-window measurement
 
@@ -172,10 +226,12 @@ kushim-silverfile-team3/
 │   ├── hitl.py              # HITL events
 │   ├── guardrails.py        # advice, exploitation and scope detection; outgoing check
 │   ├── security.py          # SSN gate, PII masking, injection scan
+│   ├── release.py           # a volunteer's sign-off that releases a draft to the taxpayer
 │   ├── agents/              # orchestrator, intake, extraction, eligibility, computation, review
 │   ├── tools/               # tax_math MCP server and client, tracing
 │   ├── form/                # HTML form, IRS PDF filling, audit.json
-│   └── dashboard/           # Flask staff dashboard
+│   ├── dashboard/           # Flask staff dashboard (port 8000)
+│   └── taxpayer/            # Flask taxpayer page (port 8001)
 ├── data/
 │   ├── policy.md            # reference corpus the Eligibility agent cites
 │   ├── forms/f1040sr.pdf    # official IRS 2025 Form 1040-SR (fillable)

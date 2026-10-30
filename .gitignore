@@ -22,5 +22,6 @@ traces/*
 .vscode/
 .idea/
 outputs/
+uploads/
 *.sqlite-shm
 *.sqlite-wal

@@ -56,6 +56,7 @@ def _session_row(thread_id: str, values: dict, updated_at: str) -> dict:
         "open_hitl": sum(1 for event in values.get("hitl", []) if event["status"] == "open"),
         "updated_at": updated_at,
         "taxpayer": first_name["value"] if first_name else "",
+        "released": bool(values.get("release")),
     }
 
 

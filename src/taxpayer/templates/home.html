@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Welcome{% endblock %}
+{% block content %}
+<h1>Let's prepare your 2025 tax return</h1>
+<p class="lead">We'll ask you some simple questions, one at a time, and you can upload a photo of your W-2.
+   A Kushim volunteer then checks everything before you see your draft Form 1040-SR.</p>
+
+<ol class="steps">
+  <li><strong>Answer a few questions</strong> about you and your household. It takes about 15 minutes.</li>
+  <li><strong>Upload your tax forms</strong>, such as a photo of your W-2.</li>
+  <li><strong>A volunteer checks your draft.</strong> We'll show you your form here once they have.</li>
+</ol>
+
+<form method="post" action="{{ url_for('start') }}">
+  <button type="submit" class="primary">Start my return</button>
+</form>
+
+<section class="aside">
+  <h2>Already started?</h2>
+  <p>Open the private link you saved when you started. It takes you straight back to where you left off.</p>
+</section>
+{% endblock %}

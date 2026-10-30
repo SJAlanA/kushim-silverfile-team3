@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}{{ entry.title }}: grader{% endblock %}
+{% block content %}
+{% set ref = session_id|reference %}
+<div class="grader">
+<p class="crumb"><a href="{{ url_for('grader_home') }}">Grader's dashboard</a></p>
+<h1>{{ entry.title }}</h1>
+<p class="lead">{{ entry.description }}</p>
+<p class="meta">Return Ref. {{ ref }} ·
+  <a href="{{ url_for('tax_return', session_id=session_id) }}" target="_blank" rel="noopener">Taxpayer view</a> ·
+  <a href="{{ staff }}/returns/{{ ref }}" target="_blank" rel="noopener">Staff view</a></p>
+
+<section class="next" aria-labelledby="h-next">
+  <h2 id="h-next">What to do next</h2>
+  {% if event %}
+    <p class="step-badge">A volunteer is needed</p>
+    <p><strong>{{ condition_label(event.condition) }}.</strong> {{ event.reason }}</p>
+    {% if hint %}
+    <div class="hint-box">
+      <p><strong>The case file's volunteer decided:</strong> {{ decision_label(hint.decision) }}.</p>
+      {% for qid, value in (hint.updates or {}).items() %}<p>Correct an answer: <strong>{{ answer_label(qid) }}</strong> → {{ answer_value(qid, value) }}</p>{% endfor %}
+      {% if hint.note %}<p>Note: “{{ hint.note }}”</p>{% endif %}
+    </div>
+    {% endif %}
+    <div class="choices">
+      <a class="button primary" href="{{ staff }}/returns/{{ ref }}/decisions/{{ event.event_id }}" target="_blank" rel="noopener">Make this decision in the staff dashboard</a>
+    </div>
+    <form method="post" action="{{ url_for('grader_continue', case_id=entry.id, session_id=session_id) }}">
+      <p>After you save the decision, come back here:</p>
+      <button type="submit" class="secondary">Continue filling</button>
+    </form>
+  {% elif asking %}
+    <p class="step-badge">Ready to carry on</p>
+    <p>The decision is saved and SilverFile is asking the next question: “{{ asking.text }}”</p>
+    <form method="post" action="{{ url_for('grader_continue', case_id=entry.id, session_id=session_id) }}">
+      <button type="submit" class="primary">Continue filling</button>
+    </form>
+  {% elif released %}
+    <p class="step-badge step-done">Released to the taxpayer</p>
+    <p>The volunteer has released this draft. The taxpayer view now shows the form.</p>
+    <div class="choices"><a class="button primary" href="{{ url_for('tax_return', session_id=session_id) }}" target="_blank" rel="noopener">Open the taxpayer view</a></div>
+  {% elif s.status == "complete" %}
+    <p class="step-badge">Draft ready to release</p>
+    <p>The draft is finished and has passed SilverFile's checks. The taxpayer can't see it until a volunteer releases it.</p>
+    <div class="choices"><a class="button primary" href="{{ staff }}/returns/{{ ref }}#h-release" target="_blank" rel="noopener">Check and release it in the staff dashboard</a></div>
+    <p class="hint">Then refresh this page.</p>
+  {% elif s.status == "escalated" %}
+    <p class="step-badge step-done">Stopped by a volunteer</p>
+    <p>A volunteer chose to stop, so this return will be prepared by hand. The taxpayer view says a volunteer will help them.</p>
+  {% else %}
+    <p class="step-badge">In progress</p>
+    <p>SilverFile is still working on this return. Refresh this page in a moment.</p>
+  {% endif %}
+</section>
+
+<section aria-labelledby="h-compare">
+  <h2 id="h-compare">Expected and actual</h2>
+  <table class="compare">
+    <thead><tr><th>Check</th><th>Case file expects</th><th>This run</th><th><span class="sr-only">Match</span></th></tr></thead>
+    <tbody>
+      {% if compare.expected_conditions or compare.raised %}
+      {% set ok = compare.raised[:compare.expected_conditions|length] == compare.expected_conditions %}
+      <tr><td>Volunteer steps raised</td>
+          <td>{{ compare.expected_conditions|map("condition_label")|join(", ") or "None" }}</td>
+          <td>{{ compare.raised|map("condition_label")|join(", ") or "None yet" }}</td>
+          <td class="{{ 'ok' if ok else 'pending' }}">{{ "✓" if ok else "…" }}</td></tr>
+      {% endif %}
+      {% if compare.expected_status %}
+      <tr><td>How the run ends</td><td>{{ compare.expected_status|replace("complete", "Draft finished")|replace("escalated", "Stopped by a volunteer") }}</td>
+          <td>{{ (compare.status or "")|replace("complete", "Draft finished")|replace("escalated", "Stopped by a volunteer")|replace("awaiting_human", "Waiting for a volunteer")|replace("intake", "Answering questions") }}</td>
+          <td class="{{ 'ok' if compare.status == compare.expected_status else 'pending' }}">{{ "✓" if compare.status == compare.expected_status else "…" }}</td></tr>
+      {% endif %}
+      {% for row in compare.lines %}
+      <tr><td>Form line {{ row.line }}</td><td class="num">{{ "{:,}".format(row.expected) }}</td>
+          <td class="num">{{ "{:,}".format(row.actual) if row.actual is not none else "Not worked out yet" }}</td>
+          <td class="{{ 'ok' if row.actual == row.expected else ('bad' if row.actual is not none else 'pending') }}">{{ "✓" if row.actual == row.expected else ("✗" if row.actual is not none else "…") }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+</div>
+{% endblock %}
