@@ -26,6 +26,8 @@ docker compose build          # first time, and after every git pull
 docker compose up             # starts the staff dashboard (8000) and the taxpayer page (8001)
 ```
 
+**With the submitted image file** (`silverfile-image.tar.gz`, no repository needed): see [Run the submitted image file](#run-the-submitted-image-file-no-repository-needed).
+
 **With Python** (after [Setup](#setup-local)), in two terminals:
 
 ```bash
@@ -201,6 +203,42 @@ docker compose run --rm app python run.py --interactive
 **After pulling new code, rebuild the image** with `docker compose build` (or `docker compose up --build`). `docker compose run` reuses an existing image, so without a rebuild it runs the old code.
 
 The image runs offline by default and includes Tesseract. All services share one checkpoint database volume, so a run paused on a HITL event (from the taxpayer page, the grader's dashboard or `docker compose run`) can be resolved in the dashboard container. Taxpayers' uploaded photos stay in that private volume. Forms are written to `./outputs` and traces to `./traces` on your machine. To use Claude in Docker, put the key in `.env` and run with `SILVERFILE_OFFLINE=0 docker compose up`. Makefile shortcuts: `make docker-build`, `make docker-up`, `make docker-demo1`, `make docker-test`.
+
+### Run the submitted image file (no repository needed)
+
+The submission includes the image as `silverfile-image.tar.gz`, built for Intel/AMD (`linux/amd64`). It runs on any machine with Docker, including Apple-chip Macs, where Docker prints a platform warning and runs it through emulation, a little slower.
+
+Load the image (once):
+
+```bash
+docker load -i silverfile-image.tar.gz
+```
+
+Start the staff dashboard and the taxpayer page together:
+
+```bash
+docker run --rm -p 8000:8000 -p 8001:8001 silverfile:latest sh -c "python run.py --dashboard & python run.py --taxpayer"
+```
+
+Then open the grader's dashboard at http://localhost:8001/grader and the staff dashboard at http://localhost:8000. Stop with Ctrl-C. Everything starts fresh each time; to keep sessions between runs and get the finished forms on your machine, add `-v silverfile-state:/app/state -v "$PWD/outputs:/app/outputs"` after `--rm` (on Windows PowerShell write `${PWD}`).
+
+Run an eval case or the tests from the terminal instead:
+
+```bash
+docker run --rm -v "$PWD/outputs:/app/outputs" silverfile:latest python run.py --case demo/eval_case_1/case.json
+```
+
+```bash
+docker run --rm silverfile:latest python run.py --case demo/eval_case_2/case.json
+```
+
+```bash
+docker run --rm silverfile:latest python -m pytest -q
+```
+
+To answer the questions yourself, use `docker run --rm -it silverfile:latest python run.py --interactive`.
+
+The file was made from the repository with `docker buildx build --platform linux/amd64 -t silverfile:latest --load .` and then `docker save silverfile:latest | gzip > silverfile-image.tar.gz`.
 
 ## Context-window measurement
 
